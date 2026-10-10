@@ -1,7 +1,5 @@
 # 日常工具箱
 
-梁帅童 · 纺织服装学院 · 上海工程技术大学
-
 在线访问：https://leoheihei.github.io/toolbox/
 
 ## 包含工具
