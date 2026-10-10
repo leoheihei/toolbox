@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日常工具箱</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Microsoft YaHei", "PingFang SC", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    background: #f5f7fa;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .container { width: 100%; max-width: 900px; }
+
+  h1 {
+    margin: 0 0 8px;
+    text-align: center;
+    font-size: 32px;
+    color: #111827;
+    letter-spacing: 0.5px;
+  }
+
+  .author {
+    margin: 0 0 12px;
+    text-align: center;
+    font-size: 15px;
+    color: #4b5563;
+    letter-spacing: 0.5px;
+  }
+
+  .subtitle {
+    margin: 0 0 32px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 16px;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    display: block;
+    padding: 26px 24px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: #93c5fd;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  }
+
+  .card h2 {
+    margin: 0 0 10px;
+    font-size: 21px;
+    color: #1d4ed8;
+  }
+
+  .card p {
+    margin: 0;
+    line-height: 1.7;
+    color: #4b5563;
+    font-size: 15px;
+  }
+
+  .tags {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tag {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1px solid #dbe1fb;
+  }
+
+  .counter {
+    margin: 32px 0 0;
+    text-align: center;
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+  .counter span { font-weight: 600; color: #1d4ed8; }
+
+  .footer {
+    margin: 18px 0 0;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 12.5px;
+  }
+
+  @media (max-width: 640px) {
+    .cards { grid-template-columns: 1fr; }
+    h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <main class="container">
+    <h1>日常工具箱</h1>
+    <p class="author">梁帅童 &nbsp;|&nbsp; 纺织服装学院 &nbsp;|&nbsp; 上海工程技术大学</p>
+    <p class="subtitle">请选择要使用的计算工具</p>
+
+    <div class="cards">
+      <a class="card" href="吸液量计算器20261010.html">
+        <h2>管吸液体量计算器</h2>
+        <p>层流吸液模型：按管径、液体物性与接触时间，计算毛细管吸入液体体积，并给出两条极限解析解与吸液曲线。</p>
+        <div class="tags">
+          <span class="tag">层流吸液模型</span>
+          <span class="tag">解析解</span>
+          <span class="tag">吸液曲线</span>
+        </div>
+      </a>
+    </div>
+
+    <p class="counter">
+      本站总访问量 <span id="vercount_value_site_pv">加载中…</span> 次
+      &nbsp;|&nbsp;
+      总访客数 <span id="vercount_value_site_uv">加载中…</span> 人
+    </p>
+
+    <p class="footer">© 梁帅童 · 上海工程技术大学纺织服装学院</p>
+  </main>
+
+  <!-- Vercount 访问计数器（可选，如长期显示"加载中…"可删除本行） -->
+  <script defer src="https://events.vercount.one/js"></script>
+</body>
+</html>

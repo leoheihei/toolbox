@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管吸液体量计算器 · 层流吸液模型</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --border:#d9dce1; --border-strong:#c3c8d0;
+  --text:#1f2430; --text-dim:#6b7280; --text-dim2:#8a909c;
+  --accent:#1a5fb4; --accent-dim:#eaf1fb; --accent-deep:#154a8a;
+  --ok:#0b7a3b; --ok-bg:#eef7f0; --ok-line:#cfe3d6;
+  --warn:#b45309; --warn-bg:#fdf6ec; --warn-line:#f0d9b0;
+  --danger:#c0392b; --danger-bg:#fdf1f1; --danger-line:#eccaca;
+  --shadow:0 1px 3px rgba(20,30,50,.08),0 1px 2px rgba(20,30,50,.04);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;
+  background:var(--bg); color:var(--text); font-size:13.5px; line-height:1.6;
+}
+.wrap{max-width:1240px; margin:0 auto; padding:22px 20px 64px}
+
+/* ===== 标题 ===== */
+h1{font-size:20px; font-weight:700; margin:0 0 4px}
+.sub{color:var(--text-dim); font-size:12.5px; margin:0 0 16px}
+
+/* ===== Tabs ===== */
+.tabs{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 16px; border-bottom:1px solid var(--border); padding-bottom:12px}
+.tab{
+  padding:7px 18px; border:1px solid var(--border); border-radius:20px; cursor:pointer;
+  background:#fff; font:inherit; font-size:13px; color:var(--text-dim); white-space:nowrap;
+}
+.tab:hover{border-color:var(--accent); color:var(--accent)}
+.tab.active{background:var(--accent); color:#fff; border-color:var(--accent)}
+.panel{display:none}
+.panel.active{display:block}
+
+/* ===== 计算器布局 ===== */
+.layout{display:grid; grid-template-columns:minmax(0,360px) minmax(0,1fr); gap:16px; align-items:start}
+@media(max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+/* ===== 卡片 ===== */
+.card{background:var(--panel); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow); padding:14px 16px}
+.card+.card{margin-top:14px}
+.card>h2{font-size:14px; font-weight:600; margin:0 0 10px; padding-bottom:8px; border-bottom:1px solid var(--border)}
+.card>h2 .tag{font-size:11px; font-weight:400; color:var(--text-dim2); margin-left:6px}
+
+/* ===== 表单 ===== */
+.frow{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,118px) 76px; gap:8px; align-items:center; margin:0 0 9px}
+.frow label{font-size:12.5px; color:var(--text); line-height:1.35}
+.frow label i{font-style:normal; color:var(--text-dim2); font-size:11px}
+.frow.wide{grid-template-columns:minmax(0,1fr) minmax(0,118px)}
+.frow.two{grid-template-columns:minmax(0,1fr) minmax(0,118px)}
+input[type=number],input[type=text],select{
+  width:100%; min-width:0; padding:5px 8px; border:1px solid var(--border-strong); border-radius:6px;
+  font:inherit; font-size:12.5px; color:var(--text); background:#fff;
+}
+input[type=number]:focus,select:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-dim)}
+select{cursor:pointer}
+.hint{font-size:11px; color:var(--text-dim2); margin:-4px 0 9px}
+
+/* ===== KPI ===== */
+.kpi-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px}
+.kpi{background:#f8f9fb; border:1px solid var(--border); border-radius:8px; padding:9px 11px}
+.kpi .k{font-size:11px; color:var(--text-dim)}
+.kpi .v{font-size:17px; font-weight:700; font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; margin-top:2px; word-break:break-all; letter-spacing:-.2px}
+.kpi .u{font-size:11px; font-weight:400; color:var(--text-dim2); margin-left:2px}
+.kpi .hint2{font-size:10.5px; color:var(--text-dim2); margin-top:2px}
+.kpi.hl{background:var(--accent-dim); border-color:#c5daf3}
+.kpi.hl .v{color:var(--accent-deep)}
+
+/* ===== 消息 ===== */
+.msg{border-radius:8px; padding:9px 12px; font-size:12.5px; margin:0 0 9px; border:1px solid transparent; line-height:1.5}
+.msg:last-child{margin-bottom:0}
+.msg b{font-weight:600}
+.msg.ok{background:var(--ok-bg); color:var(--ok); border-color:var(--ok-line)}
+.msg.warn{background:var(--warn-bg); color:var(--warn); border-color:var(--warn-line)}
+.msg.err{background:var(--danger-bg); color:var(--danger); border-color:var(--danger-line)}
+.msg.info{background:#f2f6fb; color:#2c5282; border-color:#d3e0f0}
+
+/* ===== 图表 ===== */
+.chart-head{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px}
+.chart-head .sp{flex:1}
+.seg{display:inline-flex; border:1px solid var(--border-strong); border-radius:7px; overflow:hidden}
+.seg button{font:inherit; font-size:12px; padding:5px 12px; border:0; background:#fff; color:var(--text-dim); cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--accent); color:#fff}
+.chartbox{border:1px solid var(--border); border-radius:9px; padding:8px 8px 4px; background:#fff}
+svg#chart{width:100%; height:auto; display:block}
+.slider-row{display:flex; align-items:center; gap:10px; margin-top:6px; padding:0 4px}
+.slider-row input[type=range]{flex:1; accent-color:var(--accent); min-width:0}
+.slider-row .rd{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:12px; color:var(--text-dim); white-space:nowrap; min-width:170px; text-align:right}
+
+/* ===== 表格 ===== */
+table.tbl{width:100%; border-collapse:collapse; font-size:12px; background:#fff}
+table.tbl th,table.tbl td{border:1px solid var(--border); padding:6px 9px; text-align:left; vertical-align:top}
+table.tbl th{background:#f2f5f9; font-weight:600; text-align:center}
+table.tbl td.c{text-align:center; font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+table.tbl tr:nth-child(even) td{background:#fafbfd}
+.nomen{table-layout:fixed}
+.nomen th,.nomen td{text-align:left}
+.nomen td.sym{font-family:ui-monospace,Menlo,monospace; color:var(--text); white-space:nowrap}
+.nomen td.unit{font-family:ui-monospace,Menlo,monospace; color:var(--text-dim2); white-space:nowrap}
+.nomen td.note{color:var(--text-dim); font-size:11.5px}
+.nomen col.c-s{width:78px} .nomen col.c-f{width:150px} .nomen col.c-u{width:104px}
+
+/* ===== 公式排版（纯 HTML/CSS，零依赖） ===== */
+.eq{margin:10px 0; padding:10px 14px; background:#f8f9fb; border:1px solid var(--border); border-radius:8px;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:13.5px; color:var(--text);
+    overflow-x:auto; line-height:2.1}
+.eq .frac{display:inline-block; vertical-align:middle; text-align:center; margin:0 3px}
+.eq .frac .num{display:block; padding:0 5px; border-bottom:1.2px solid var(--text)}
+.eq .frac .den{display:block; padding:0 5px}
+.eq .lbl{font-family:-apple-system,"PingFang SC",sans-serif; font-size:11.5px; color:var(--text-dim2); margin-left:8px}
+var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size:1.06em}
+.num2{font-family:"SF Mono",ui-monospace,Menlo,monospace}
+
+/* ===== 物理模型文档 ===== */
+.doc h3{font-size:14px; font-weight:600; margin:20px 0 8px; padding-left:9px; border-left:3px solid var(--accent)}
+.doc h3:first-child{margin-top:4px}
+.doc p{margin:6px 0}
+.doc ul{margin:6px 0; padding-left:22px}
+.doc li{margin:3px 0}
+.doc .lead{color:var(--text-dim); font-size:12.5px}
+.doc code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:12px; background:#eef1f5; padding:1px 5px; border-radius:4px}
+.doc .figbox{border:1px solid var(--border); border-radius:9px; background:#fbfcfe; padding:8px; margin:12px 0}
+.doc .figbox svg{width:100%; height:auto; display:block}
+.doc .figcap{font-size:11.5px; color:var(--text-dim2); text-align:center; margin:4px 0 0}
+.callout{border-radius:8px; padding:10px 13px; font-size:12.5px; margin:10px 0; border:1px solid}
+.callout.note{background:var(--warn-bg); border-color:var(--warn-line); color:#7a5a1e}
+.callout.key{background:var(--accent-dim); border-color:#c5daf3; color:#1b3a5c}
+.callout.gray{background:#f4f5f7; border-color:var(--border); color:#4b5563}
+.callout b{font-weight:600}
+.badge{display:inline-block; font-size:10.5px; padding:1px 7px; border-radius:10px; background:#e6e9ee; color:var(--text-dim); margin-left:6px; vertical-align:middle}
+.badge.no{background:var(--danger-bg); color:var(--danger)}
+
+/* ===== 打印 ===== */
+@media print{
+  .tabs{display:none}
+  .panel{display:none !important}
+  .panel.active{display:block !important}
+  body{background:#fff}
+  .card{box-shadow:none; break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>管吸液体量计算器</h1>
+  <p class="sub">恒定吸力 · 低流速层流 · 连续流出 · 储液池液位随时间下降</p>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="calc">计算器</button>
+    <button class="tab" data-tab="model">物理模型</button>
+  </nav>
+
+  <!-- ==================== 计算器 ==================== -->
+  <section class="panel active" id="panel-calc">
+    <div class="layout">
+      <!-- 左列：输入 -->
+      <div class="col-in">
+        <div class="card">
+          <h2>输入参数</h2>
+
+          <div class="frow">
+            <label>大气压 P<sub>atm</sub></label>
+            <input type="number" id="Patm" step="any" value="101.325">
+            <select id="u_Patm">
+              <option value="1000" selected>kPa</option>
+              <option value="98.0665">cmH₂O</option>
+              <option value="133.322">mmHg</option>
+              <option value="1">Pa</option>
+            </select>
+          </div>
+          <div class="hint">默认 1 个标准大气压 = 101.325 kPa</div>
+
+          <div class="frow">
+            <label>管顶压力 P<sub>top</sub> <i>液面上方绝对压力</i></label>
+            <input type="number" id="Ptop" step="any" value="91.325">
+            <select id="u_Ptop">
+              <option value="1000" selected>kPa</option>
+              <option value="98.0665">cmH₂O</option>
+              <option value="133.322">mmHg</option>
+              <option value="1">Pa</option>
+            </select>
+          </div>
+          <div class="hint">须小于 P<sub>atm</sub> 才有吸力；须 ≥ P<sub>vap</sub> 才不空化</div>
+          <div class="hint" id="dPRead">ΔP = P<sub>atm</sub> − P<sub>top</sub> = 10.00 kPa</div>
+
+          <div class="frow">
+            <label>管内径 D</label>
+            <input type="number" id="D" step="any" value="4">
+            <select id="u_D">
+              <option value="0.001" selected>mm</option>
+              <option value="0.01">cm</option>
+            </select>
+          </div>
+          <div class="hint">建议 &lt; 10 mm（题目给定 &lt; 1 cm）</div>
+
+          <div class="frow">
+            <label>管路长度 L <i>黏性作用长度</i></label>
+            <input type="number" id="L" step="any" value="50">
+            <select id="u_L">
+              <option value="0.01" selected>cm</option>
+              <option value="1">m</option>
+            </select>
+          </div>
+          <div class="hint">沿程流动路径长度（软管弯曲时取等效路径长度）</div>
+
+          <div class="frow">
+            <label>出水口高度 H<sub>0</sub> <i>相对池液面</i></label>
+            <input type="number" id="H0" step="any" value="20">
+            <select id="u_H0">
+              <option value="0.01" selected>cm</option>
+              <option value="1">m</option>
+            </select>
+          </div>
+          <div class="hint">水须被提升的竖直高度；须 ΔP &gt; ρgH<sub>0</sub> 才能出水</div>
+
+          <div class="frow">
+            <label>储液池直径 D<sub>pool</sub></label>
+            <input type="number" id="Dpool" step="any" value="20">
+            <select id="u_Dpool">
+              <option value="0.01" selected>cm</option>
+              <option value="1">m</option>
+            </select>
+          </div>
+          <div class="hint">池液位随出水下降；池越大液位变化越慢</div>
+
+          <div class="frow">
+            <label>计时时间 T</label>
+            <input type="number" id="T" step="any" value="1">
+            <select id="u_T"><option value="1" selected>s</option></select>
+          </div>
+          <div class="hint">求解该时刻的累计流出量与瞬时流量</div>
+
+          <div class="frow">
+            <label>重力加速度 g</label>
+            <input type="number" id="g" step="any" value="9.8">
+            <select id="u_g"><option value="1" selected>m/s²</option></select>
+          </div>
+
+          <div class="frow">
+            <label>液体饱和蒸气压 P<sub>vap</sub> <i>空化判据</i></label>
+            <input type="number" id="Pvap" step="any" value="2.34">
+            <select id="u_Pvap"><option value="1000" selected>kPa</option><option value="1">Pa</option></select>
+          </div>
+          <div class="hint">水 20 ℃ ≈ 2.34 kPa</div>
+        </div>
+
+        <div class="card">
+          <h2>液体物性 <span class="tag">预设 + 可自定义</span></h2>
+          <div class="frow wide">
+            <label>液体</label>
+            <select id="liq">
+              <option value="custom">自定义</option>
+              <option value="water" selected>水（20 ℃）</option>
+              <option value="ethanol">乙醇（20 ℃）</option>
+              <option value="glycerol">甘油（20 ℃）</option>
+              <option value="silicone">硅油（1000 cSt）</option>
+            </select>
+          </div>
+          <div class="frow">
+            <label>密度 ρ</label>
+            <input type="number" id="rho" step="any" value="998">
+            <select id="u_rho"><option value="1" selected>kg/m³</option><option value="1000">g/cm³</option></select>
+          </div>
+          <div class="frow">
+            <label>动力黏度 μ</label>
+            <input type="number" id="mu" step="any" value="1.002">
+            <select id="u_mu">
+              <option value="0.001" selected>mPa·s</option>
+              <option value="1">Pa·s</option>
+            </select>
+          </div>
+          <div class="hint">选预设会自动填入 ρ、μ，手动改动即切换为「自定义」</div>
+        </div>
+      </div>
+
+      <!-- 右列：结果 + 图表 -->
+      <div class="col-out">
+        <div class="card">
+          <h2>计算结果</h2>
+          <div id="msgs"></div>
+          <div class="kpi-grid" id="kpis"></div>
+        </div>
+
+        <div class="card">
+          <div class="chart-head">
+            <h2 style="border:0;padding:0;margin:0">曲线</h2>
+            <div class="sp"></div>
+            <div class="seg" id="modeSeg">
+              <button class="active" data-mode="Vout">流出量 V(t)</button>
+              <button data-mode="Q">流量 Q(t)</button>
+            </div>
+          </div>
+          <div class="chartbox"><svg id="chart" viewBox="0 0 720 340" preserveAspectRatio="xMidYMid meet"></svg></div>
+          <div class="slider-row">
+            <input type="range" id="tslid" min="0" max="1000" value="0">
+            <span class="rd" id="tslidRead"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>两条极限对比</h2>
+          <table class="tbl">
+            <thead><tr><th>场景</th><th>表达式</th><th>数值</th><th>说明</th></tr></thead>
+            <tbody id="limitBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 物理模型 ==================== -->
+  <section class="panel" id="panel-model">
+    <div class="doc" style="max-width:900px">
+
+      <h3>1. 物理图像与假设</h3>
+      <p>一根竖直细管（内半径 <var>r</var>、截面积 <var>A</var>=π<i>r</i><sup>2</sup>、沿程长度 <var>L</var>）下端浸入敞口储液池（液面为大气压 <var>P</var><sub>atm</sub>，<b>作为输入变量</b>），上端液面上方压力为 <var>P</var><sub>top</sub>（管顶绝对压力，<b>作为输入变量</b>），二者之差即吸力（真空度）<var>ΔP</var>=<var>P</var><sub>atm</sub>−<var>P</var><sub>top</sub>。水被持续吸上，从<b>高出池液面 H<sub>0</sub> 的出水口</b>不断流出；储液池液位随出水而下降。</p>
+      <div class="figbox">
+        <svg viewBox="0 0 640 336" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,PingFang SC,sans-serif">
+          <rect x="110" y="212" width="400" height="86" fill="#e8f0f9" stroke="#c5d5e6"/>
+          <line x1="110" y1="212" x2="510" y2="212" stroke="#7ea6cf" stroke-width="1.5"/>
+          <text x="500" y="206" font-size="11.5" fill="#4a6f96" text-anchor="end">自由液面 P<tspan font-size="9" dy="3">atm</tspan></text>
+          <line x1="110" y1="314" x2="510" y2="314" stroke="#8a909c" stroke-width="1"/>
+          <line x1="110" y1="308" x2="110" y2="320" stroke="#8a909c"/>
+          <line x1="510" y1="308" x2="510" y2="320" stroke="#8a909c"/>
+          <text x="310" y="330" font-size="12" fill="#4b5563" text-anchor="middle">储液池直径 D<tspan font-size="9" dy="3">pool</tspan></text>
+          <rect x="300" y="70" width="6" height="180" fill="#c9ced7" stroke="#aab0bb"/>
+          <rect x="352" y="70" width="6" height="180" fill="#c9ced7" stroke="#aab0bb"/>
+          <rect x="306" y="70" width="46" height="180" fill="#9fc4e8" stroke="#6d9fcd"/>
+          <rect x="358" y="66" width="62" height="10" fill="#c9ced7" stroke="#aab0bb"/>
+          <path d="M420 71 q28 0 32 26" stroke="#1a5fb4" stroke-width="2.2" fill="none"/>
+          <path d="M452 92 l7 4 l-2 -10 z" fill="#1a5fb4"/>
+          <text x="456" y="58" font-size="12" fill="#1a5fb4">出水口 水流</text>
+          <path d="M329 70 L329 44" stroke="#1a5fb4" stroke-width="2.2"/>
+          <path d="M323 50 L329 40 L335 50 Z" fill="#1a5fb4"/>
+          <text x="340" y="46" font-size="12" fill="#1a5fb4">吸力 ΔP</text>
+          <line x1="266" y1="70" x2="266" y2="212" stroke="#c0392b" stroke-width="1.2" stroke-dasharray="3 3"/>
+          <line x1="260" y1="70" x2="272" y2="70" stroke="#c0392b"/>
+          <line x1="260" y1="212" x2="272" y2="212" stroke="#c0392b"/>
+          <text x="258" y="146" font-size="12.5" fill="#c0392b" text-anchor="end">H<tspan font-size="9" dy="3">0</tspan></text>
+          <path d="M150 222 L150 252" stroke="#0b7a3b" stroke-width="1.8"/>
+          <path d="M144 246 L150 256 L156 246 Z" fill="#0b7a3b"/>
+          <text x="158" y="244" font-size="11.5" fill="#0b7a3b">液位下降</text>
+        </svg>
+        <p class="figcap">图 1　连续抽水几何：吸力 ΔP 把水提升 H<sub>0</sub> 后自出水口连续流出；池液位下降，有效提升高度随之增大。</p>
+      </div>
+      <ul>
+        <li><b>低流速、层流</b>：雷诺数小，黏性力主导惯性，管内稳定流动由 Hagen–Poiseuille 描述。</li>
+        <li><b>恒定吸力</b>：吸力由持续工作的真空泵提供，液面上方气体压力维持 ≈ <var>P</var><sub>top</sub>（理想抽气）。</li>
+        <li><b>连续流出、自由出流</b>：管子充满液体后，水从出水口不断排出，出口压力 ≈ <var>P</var><sub>atm</sub>；管内流量沿程不变（稳态）。</li>
+        <li><b>敞口大池、池壁竖直</b>：池面压力恒为 <var>P</var><sub>atm</sub>；池截面积 <var>A</var><sub>pool</sub>=π<i>D</i><sub>pool</sub><sup>2</sup>/4 恒定，液位随出水下降。</li>
+        <li><b>管壁可视为刚硬（厚壁硅胶软管适用）</b>：管子可为厚壁硅胶软管——壁厚足够、刚度较高，工作跨壁压 ΔP 远小于临界塌陷压，故<b>截面不塌陷、管径近似不变</b>，仍可沿用 A = πr² 与 Hagen–Poiseuille 定律。管子<b>允许弯曲</b>：由流体静力学，静压只取决于两端竖直高差，弯曲不改变所需提升高度；弯曲仅使流动路径变长、局部损失增大，令流量略减（本模型以管长 L 作为等效特征长度作近似）。前提是弯曲段不形成高于液柱的局部高点（避免气堵）。</li>
+      </ul>
+
+      <h3>2. 变量与几何定义</h3>
+      <table class="tbl nomen">
+        <colgroup><col class="c-s"><col class="c-f"><col class="c-u"><col></colgroup>
+        <thead><tr><th>符号</th><th>含义</th><th>SI 单位</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="sym">r</td><td>管半径</td><td class="unit">m</td><td class="note">r = D/2，A = πr²</td></tr>
+          <tr><td class="sym">L</td><td>管路长度（黏性作用长度）</td><td class="unit">m</td><td class="note">软管弯曲时取等效路径长度</td></tr>
+          <tr><td class="sym">P_atm</td><td>大气压（输入变量）</td><td class="unit">Pa</td><td class="note">默认 1 标准大气压 = 101 325</td></tr>
+          <tr><td class="sym">P_top</td><td>管顶绝对压力（输入变量）</td><td class="unit">Pa</td><td class="note">液面上方</td></tr>
+          <tr><td class="sym">ΔP</td><td>吸力（真空度，派生）</td><td class="unit">Pa</td><td class="note">= P_atm − P_top</td></tr>
+          <tr><td class="sym">H₀</td><td>出水口初始高度</td><td class="unit">m</td><td class="note">相对池液面</td></tr>
+          <tr><td class="sym">D_pool</td><td>储液池直径</td><td class="unit">m</td><td class="note">A_pool = πD_pool²/4</td></tr>
+          <tr><td class="sym">ρ</td><td>液体密度</td><td class="unit">kg/m³</td><td class="note">水 ≈ 1000</td></tr>
+          <tr><td class="sym">μ</td><td>动力黏度</td><td class="unit">Pa·s</td><td class="note">水 20 ℃ ≈ 1.0e−3</td></tr>
+          <tr><td class="sym">g</td><td>重力加速度</td><td class="unit">m/s²</td><td class="note">≈ 9.8</td></tr>
+          <tr><td class="sym">Q</td><td>流量</td><td class="unit">m³/s</td><td class="note">Q = πr⁴(ΔP−ρgH)/(8μL)</td></tr>
+          <tr><td class="sym">Q₀</td><td>初始流量</td><td class="unit">m³/s</td><td class="note">出水瞬间</td></tr>
+          <tr><td class="sym">V_max</td><td>总可流出量</td><td class="unit">m³</td><td class="note">A_pool(ΔP−ρgH₀)/(ρg)</td></tr>
+          <tr><td class="sym">τ_flow</td><td>流量衰减时间常数</td><td class="unit">s</td><td class="note">8μL·A_pool/(πr⁴ρg)</td></tr>
+          <tr><td class="sym">t_start</td><td>首次出水时间</td><td class="unit">s</td><td class="note">充管到出水口</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3. 控制方程与推导</h3>
+      <p>稳定流动时，驱动压差要先克服<b>提升静压</b> <var>ρgH</var>，余下部分克服层流<b>黏性阻力</b>（Hagen–Poiseuille，低流速下惯性项可忽略）：</p>
+      <div class="eq">
+        ΔP − ρ g H = <span class="frac"><span class="num">8 μ L Q</span><span class="den">π r<sup>4</sup></span></span>
+        <span class="lbl">稳态管流</span>
+      </div>
+      <p>即流量 <span class="num2">Q = πr⁴(ΔP − ρgH)/(8μL)</span>。出水流出的同时池液位下降，提升高度 <var>H</var> 随累计流出体积 <var>V</var> 增大：</p>
+      <div class="eq">
+        H(t) = H<sub>0</sub> + <span class="frac"><span class="num">V(t)</span><span class="den">A<sub>pool</sub></span></span>
+        <span style="display:inline-block;width:36px"></span>
+        <span class="frac"><span class="num">d V</span><span class="den">d t</span></span> = Q = C·(ΔP − ρ g H<sub>0</sub> − k·V)
+      </div>
+      <p>其中流量导纳 <span class="num2">C = πr⁴/(8μL)</span>，液位耦合系数 <span class="num2">k = ρg/A_pool</span>。这是一阶线性方程，流量随液位下降而衰减。</p>
+      <div class="callout key">物理含义：<b>提升高度</b>与<b>黏性阻力</b>共同消耗吸力；池液位越低，提升高度越大，出水流量越小，直到 ΔP 全部用于提升（Q→0）。</div>
+
+      <h3>4. 解析解</h3>
+      <p>稳态流出阶段（t 自首次出水 t<sub>start</sub> 起算）的解：</p>
+      <div class="eq">
+        V<sub>max</sub> = <span class="frac"><span class="num">A<sub>pool</sub>(ΔP − ρ g H<sub>0</sub>)</span><span class="den">ρ g</span></span>
+        <span style="display:inline-block;width:30px"></span>
+        τ<sub>flow</sub> = <span class="frac"><span class="num">8 μ L A<sub>pool</sub></span><span class="den">π r<sup>4</sup> ρ g</span></span>
+      </div>
+      <div class="eq">
+        V(t) = V<sub>max</sub>(1 − e<sup>−t/τ<sub>flow</sub></sup>)
+        <span style="display:inline-block;width:24px"></span>
+        Q(t) = <span class="frac"><span class="num">V<sub>max</sub></span><span class="den">τ<sub>flow</sub></span></span> e<sup>−t/τ<sub>flow</sub></sup>
+        <span style="display:inline-block;width:20px"></span>
+        Q<sub>0</sub> = C(ΔP − ρ g H<sub>0</sub>)
+      </div>
+      <p>启动阶段（充管）沿用上升模型：平衡高度 h<sub>eq</sub>=ΔP/(ρg)、上升时间常数 τ<sub>up</sub>=8μL/(ρg r²)；液柱升到出水口高度 H<sub>0</sub> 的时刻即<b>首次出水时间</b>：</p>
+      <div class="eq">
+        t<sub>start</sub> = − τ<sub>up</sub> · ln(1 − H<sub>0</sub>/h<sub>eq</sub>)
+        <span class="lbl">要求 ΔP &gt; ρ g H<sub>0</sub></span>
+      </div>
+      <p class="lead">到计时时刻 T：令 t′ = T − t<sub>start</sub>；若 t′≤0 则尚未出水（V=0），否则 V<sub>out</sub>(T)=V<sub>max</sub>(1−e<sup>−t′/τ<sub>flow</sub></sup>)。</p>
+
+      <h3>5. 两条极限</h3>
+      <table class="tbl">
+        <thead><tr><th>极限</th><th>条件</th><th>表达式</th><th>依赖关系</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>初始流量（出水瞬间）</td><td class="c">t → t<sub>start</sub>⁺</td>
+            <td class="c">Q₀ = π r<sup>4</sup>(ΔP−ρgH₀) / (8 μ L)</td>
+            <td>∝ r<sup>4</sup>，∝ (ΔP−ρgH₀)，∝ 1/μ，∝ 1/L</td>
+          </tr>
+          <tr>
+            <td>总流出量（趋于停止）</td><td class="c">t → ∞</td>
+            <td class="c">V_max = A_pool(ΔP−ρgH₀) / (ρg)</td>
+            <td>∝ A_pool，∝ (ΔP−ρgH₀)，与 μ、L 无关</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="lead">半径对流量极其敏感（∝ r⁴），这解释了为何细管「出水又慢又少」。</p>
+
+      <h3>6. 上限与边界</h3>
+      <ul>
+        <li><b>出水条件</b>：ΔP = P<sub>atm</sub> − P<sub>top</sub> &gt; ρgH<sub>0</sub>。吸力不足以把水提升到出水口高度时，管内液柱只升到 h<sub>eq</sub>=ΔP/(ρg) 便停止，<b>不会流出</b>。</li>
+        <li><b>空化上限</b>：P<sub>top</sub> &gt; P<sub>vap</sub>（等价 ΔP &lt; P<sub>atm</sub> − P<sub>vap</sub>）。一个大气压最多支撑约 10.3 m 水柱（水 20 ℃ 时 ≈ 10.1 m）。</li>
+        <li><b>总容量上限</b>：V ≤ V_max = A_pool(ΔP−ρgH₀)/(ρg)。池液位降到 ΔP 恰好全用于提升时出水停止。</li>
+      </ul>
+
+      <h3>7. 次要因素与未纳入因素 <span class="badge no">本计算器未实现</span></h3>
+      <ul>
+        <li><b>启动瞬态惯性</b>：充管阶段液柱加速的惯性项（二阶振荡）被忽略——本模型把启动简化为指数上升，误差仅在最初极短时间内。</li>
+        <li><b>出口动能与局部损失</b>：出水口与弯头的动能／局部阻力（∝ v²）在 Re≪1 时可忽略。</li>
+        <li><b>毛细 / 表面张力</b>：弯月面附加压差 2γcosθ/r。水在干净管中 r=2 mm 时约 70 Pa，通常远小于吸力，但极细管或弱吸力时不可忽略。</li>
+        <li><b>入口 / 局部损失</b>：尖锐入口损失系数 K≈0.5，在 Re≪1 时可忽略。</li>
+        <li><b>管壁塌陷（仅薄壁软管需考虑）</b>：若为薄壁 / 软材料软管，内部负压（跨壁压 = P<sub>atm</sub>−P<sub>top</sub>）可能把截面压扁。临界塌陷压 P<sub>cr</sub> ∼ E/(1−ν²)·(t/D)³，壁薄、E 低则 P<sub>cr</sub> 小；一旦塌陷，截面积骤减、流量受限（甚至"增大吸力也无效"）。本节模型（厚壁、不塌陷）不涉及；薄壁情形需按可塌陷管单独建模。</li>
+      </ul>
+
+      <h3>8. 符号对照表</h3>
+      <p class="lead">见上方第 2 节「变量与几何定义」。</p>
+
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ---------- Tabs ---------- */
+  var tabs = document.querySelectorAll('.tab');
+  for (var i=0;i<tabs.length;i++){
+    tabs[i].addEventListener('click', function(){
+      var name = this.getAttribute('data-tab');
+      var all = document.querySelectorAll('.tab');
+      for (var j=0;j<all.length;j++) all[j].classList.toggle('active', all[j]===this);
+      var ps = document.querySelectorAll('.panel');
+      for (var k=0;k<ps.length;k++) ps[k].classList.toggle('active', ps[k].id==='panel-'+name);
+    });
+  }
+
+  /* ---------- 液体预设（μ 以 mPa·s 计） ---------- */
+  var LIQ = {
+    water:   { rho:998,  mu:1.002 },
+    ethanol: { rho:789,  mu:1.200 },
+    glycerol:{ rho:1261, mu:1412  },
+    silicone:{ rho:970,  mu:970   }
+  };
+  var liqSel = $('liq');
+  liqSel.addEventListener('change', function(){
+    var v = this.value;
+    if (v!=='custom' && LIQ[v]){
+      $('rho').value = LIQ[v].rho;
+      $('mu').value  = LIQ[v].mu;
+      $('u_mu').value = '0.001';   // mPa·s
+      $('u_rho').value = '1';      // kg/m³
+      calc();
+    }
+  });
+  ['rho','mu'].forEach(function(id){
+    $(id).addEventListener('input', function(){ liqSel.value='custom'; });
+  });
+
+  /* ---------- 单位切换：换算数值，保持物理量不变 ---------- */
+  var UMANY = { u_Patm:1, u_Ptop:1, u_D:1, u_L:1, u_H0:1, u_Dpool:1, u_T:1, u_g:1, u_Pvap:1, u_rho:1, u_mu:1 };
+  Object.keys(UMANY).forEach(function(uid){
+    var sel = $(uid);
+    if (!sel) return;
+    var base = parseFloat(sel.value);
+    sel.addEventListener('change', function(){
+      var nv = parseFloat(sel.value);
+      if (nv===base) return;
+      var target = sel.getAttribute('data-for');
+      if (target && $(target)){
+        var cur = parseFloat($(target).value);
+        if (isFinite(cur)) $(target).value = +(cur * base / nv).toPrecision(6);
+      }
+      base = nv;
+      calc();
+    });
+  });
+  // 建立 select -> 输入框 的映射
+  $('u_Patm').setAttribute('data-for','Patm');
+  $('u_Ptop').setAttribute('data-for','Ptop');
+  $('u_D').setAttribute('data-for','D');
+  $('u_L').setAttribute('data-for','L');
+  $('u_H0').setAttribute('data-for','H0');
+  $('u_Dpool').setAttribute('data-for','Dpool');
+  $('u_T').setAttribute('data-for','T');
+  $('u_g').setAttribute('data-for','g');
+  $('u_Pvap').setAttribute('data-for','Pvap');
+  $('u_rho').setAttribute('data-for','rho');
+  $('u_mu').setAttribute('data-for','mu');
+
+  /* ---------- 读取 SI ---------- */
+  function fen(id){ var s=$(id); return s?parseFloat(s.value):1; }
+  function num(id){ var v=parseFloat($(id).value); return isFinite(v)?v:NaN; }
+
+  function readSI(){
+    var Patm = num('Patm') * fen('u_Patm');            // Pa
+    var Ptop = num('Ptop') * fen('u_Ptop');            // Pa
+    return {
+      Patm: Patm, Ptop: Ptop, dP: Patm - Ptop,         // Pa（ΔP = P_atm − P_top）
+      D:    num('D')    * fen('u_D'),                  // m
+      L:    num('L')    * fen('u_L'),                  // m
+      H0:   num('H0')   * fen('u_H0'),                 // m
+      Dpool:num('Dpool')* fen('u_Dpool'),              // m
+      T:    num('T')    * fen('u_T'),                  // s
+      g:    num('g')    * fen('u_g'),                  // m/s²
+      Pvap: num('Pvap') * fen('u_Pvap'),               // Pa
+      rho:  num('rho')  * fen('u_rho'),                // kg/m³
+      mu:   num('mu')   * fen('u_mu')                  // Pa·s
+    };
+  }
+
+  /* ---------- 格式化 ---------- */
+  function fmtLen(m){
+    var a=Math.abs(m);
+    if (a===0) return ['0','m'];
+    if (a < 1e-3) return [(m*1000).toPrecision(4),'mm'];
+    if (a < 1)    return [(m*100).toPrecision(4),'cm'];
+    return [m.toPrecision(4),'m'];
+  }
+  function fmtVol(m3){
+    var a=Math.abs(m3);
+    if (a===0) return ['0','mL'];
+    if (a < 1e-9) return [(m3*1e12).toPrecision(4),'pL'];
+    if (a < 1e-6) return [(m3*1e9).toPrecision(4),'μL'];
+    if (a < 1e-3) return [(m3*1e6).toPrecision(4),'mL'];
+    return [m3.toPrecision(4),'m³'];
+  }
+  function fmtFlow(q){
+    var a=Math.abs(q);
+    if (a===0) return ['0','mL/s'];
+    if (a < 1e-9) return [(q*1e12).toPrecision(4),'pL/s'];
+    if (a < 1e-6) return [(q*1e9).toPrecision(4),'μL/s'];
+    if (a < 1e-3) return [(q*1e6).toPrecision(4),'mL/s'];
+    return [q.toPrecision(4),'m³/s'];
+  }
+  function fmtT(s){
+    if (Math.abs(s) < 1) return [(s*1000).toPrecision(4),'ms'];
+    return [s.toPrecision(4),'s'];
+  }
+  function fmtNum(x, d){
+    if (!isFinite(x)) return '—';
+    var a=Math.abs(x);
+    if (a!==0 && (a<1e-3 || a>=1e5)) return x.toExponential(2);
+    return x.toPrecision(d||4);
+  }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  /* ---------- 计算 ---------- */
+  var state = { mode:'Vout', c:null, p:null };
+  function calc(){
+    var p = readSI();
+    if (!(p.D>0) || !(p.L>0) || !(p.T>=0) || !(p.rho>0) || !(p.mu>0) || !(p.g>0) || !(p.Patm>0) || !(p.Ptop>=0) || !(p.H0>=0) || !(p.Dpool>0)){
+      $('msgs').innerHTML = '<div class="msg err">请输入有效的正数参数（P<sub>atm</sub>、D、L、ρ、μ、g、D<sub>pool</sub> 需 &gt; 0，P<sub>top</sub>、H<sub>0</sub>、T 需 ≥ 0）。</div>';
+      $('kpis').innerHTML = ''; $('limitBody').innerHTML = '';
+      $('tslidRead').textContent = '';
+      return;
+    }
+    var r = p.D/2, A = Math.PI*r*r;
+    var Apool = Math.PI*p.Dpool*p.Dpool/4;
+    var hEq = p.dP/(p.rho*p.g);
+    var tauUp = 8*p.mu*p.L/(p.rho*p.g*r*r);
+    var dpNet = p.dP - p.rho*p.g*p.H0;
+    var canFlow = dpNet > 0;
+    var C = Math.PI*Math.pow(r,4)/(8*p.mu*p.L);
+    var Q0 = canFlow ? C*dpNet : 0;
+    var kPool = p.rho*p.g/Apool;
+    var Vmax = canFlow ? dpNet/kPool : 0;
+    var tauFlow = canFlow ? 1/(C*kPool) : Infinity;
+    var tStart = (canFlow && hEq > p.H0) ? (-tauUp*Math.log(1 - p.H0/hEq)) : Infinity;
+    var tRel = p.T - tStart;
+    var Vout = 0, Qnow = 0;
+    if (canFlow && tRel > 0){ Vout = Vmax*(1 - Math.exp(-tRel/tauFlow)); Qnow = (Vmax/tauFlow)*Math.exp(-tRel/tauFlow); }
+    var dz = Vout/Apool;
+    var maxVac = p.Patm - p.Pvap;
+
+    state.c = { r:r, A:A, Apool:Apool, hEq:hEq, tauUp:tauUp, C:C, Q0:Q0, Vmax:Vmax, tauFlow:tauFlow, tStart:tStart, canFlow:canFlow };
+    state.p = p;
+    $('dPRead').textContent = 'ΔP = P_atm − P_top = ' + fmtNum(p.dP/1000) + ' kPa';
+
+    /* 消息 */
+    var msgs = [];
+    if (p.Ptop >= p.Patm){
+      msgs.push('<div class="msg err"><b>无有效吸力：</b>P<sub>top</sub> ≥ P<sub>atm</sub>，吸力 ΔP = P<sub>atm</sub>−P<sub>top</sub> = '+fmtNum(p.dP/1000)+' kPa ≤ 0，水不会被吸上（甚至倒流）。请令 P<sub>top</sub> &lt; P<sub>atm</sub>。</div>');
+    } else if (!canFlow){
+      msgs.push('<div class="msg err"><b>无法出水：</b>吸力 ΔP = P<sub>atm</sub>−P<sub>top</sub> = '+fmtNum(p.dP/1000)+' kPa 不足以把水提升到出水口——需 ΔP &gt; ρgH<sub>0</sub> = '+fmtNum(p.rho*p.g*p.H0/1000)+' kPa。管内液柱最多升到 '+fmtLen(hEq)[0]+' '+fmtLen(hEq)[1]+'（h<sub>eq</sub>），低于出水口高度 H<sub>0</sub>。</div>');
+    } else if (p.T < tStart){
+      msgs.push('<div class="msg warn"><b>尚未出水：</b>首次出水时间 t<sub>start</sub> = '+fmtT(tStart)[0]+' '+fmtT(tStart)[1]+'，而计时 T = '+fmtNum(p.T)+' s，液柱仍在充管上升阶段。</div>');
+    }
+    if (p.Ptop <= p.Pvap){
+      msgs.push('<div class="msg err"><b>空化上限：</b>P<sub>top</sub> ≤ P<sub>vap</sub>（≈ '+fmtNum(p.Pvap/1000)+' kPa），管内压力低于饱和蒸气压，液体会气蚀/沸腾，模型不适用。可用吸力上限 ΔP &lt; P<sub>atm</sub>−P<sub>vap</sub> = '+fmtNum(maxVac/1000)+' kPa。</div>');
+    } else if (p.Ptop <= p.Pvap + 0.1*(p.Patm - p.Pvap)){
+      msgs.push('<div class="msg warn"><b>接近空化极限：</b>P<sub>top</sub> 已接近饱和蒸气压 P<sub>vap</sub>，实际出水会因气蚀明显低于计算值。</div>');
+    }
+    if (canFlow && p.T > tStart){
+      var rr = tRel/tauFlow;
+      if (rr > 4.6) msgs.push('<div class="msg warn"><b>流量已明显衰减：</b>t/τ<sub>flow</sub> = '+fmtNum(rr)+' ≫ 1，池液位下降使有效吸力（ΔP−ρgH）显著减小，出水趋于停止。</div>');
+      else msgs.push('<div class="msg ok"><b>连续流出中：</b>t/τ<sub>flow</sub> = '+fmtNum(rr)+'，出水流量随液位下降而缓慢衰减。</div>');
+    }
+    $('msgs').innerHTML = msgs.join('');
+
+    /* KPI */
+    var vOut = fmtVol(Vout), vMax = fmtVol(Vmax), q0s = fmtFlow(Q0), qNs = fmtFlow(Qnow), dzs = fmtLen(dz);
+    var k = [];
+    function kpi(kk, val, unit, hl, hint){
+      return '<div class="kpi'+(hl?' hl':'')+'"><div class="k">'+kk+'</div><div class="v">'+val+'<span class="u">'+unit+'</span></div>'+(hint?'<div class="hint2">'+hint+'</div>':'')+'</div>';
+    }
+    k.push(kpi('流出总量 V<sub>out</sub>(T)', vOut[0], vOut[1], true, '计时 T = '+fmtNum(p.T)+' s 累计'));
+    k.push(kpi('首次出水时间 t<sub>start</sub>', canFlow?fmtT(tStart)[0]:'∞', canFlow?fmtT(tStart)[1]:'', false, canFlow?'充管到出水口':'吸力不足'));
+    k.push(kpi('初始流量 Q<sub>0</sub>', q0s[0], q0s[1], false, canFlow?'出水瞬间':'吸力不足'));
+    k.push(kpi('时刻 T 流量 Q(T)', qNs[0], qNs[1], false, canFlow?'随液位衰减':'—'));
+    k.push(kpi('总可流出量 V<sub>max</sub>', vMax[0], vMax[1], false, '液位降到极限'));
+    k.push(kpi('水位下降 Δz(T)', dzs[0], dzs[1], false, '储液池液面'));
+    $('kpis').innerHTML = k.join('');
+
+    /* 极限对比表 */
+    var rows = '';
+    function row(name, expr, val, note){
+      return '<tr><td>'+name+'</td><td class="c">'+expr+'</td><td class="c">'+val+'</td><td>'+note+'</td></tr>';
+    }
+    var q0q = fmtFlow(Q0), qNq = fmtFlow(Qnow);
+    rows += row('初始流量 Q<sub>0</sub>', 'πr⁴(ΔP−ρgH<sub>0</sub>)/(8μL)', q0q[0]+' '+q0q[1], canFlow?'出水瞬间流量':'吸力不足，出水为 0');
+    rows += row('时刻 T 流量 Q(T)', 'Q<sub>0</sub>·e<sup>−t′/τ<sub>flow</sub></sup>', qNq[0]+' '+qNq[1], 't′ = T − t<sub>start</sub>');
+    rows += row('流出总量 V<sub>out</sub>(T)', 'V<sub>max</sub>(1−e<sup>−t′/τ<sub>flow</sub></sup>)', vOut[0]+' '+vOut[1], '到计时 T');
+    rows += row('总可流出量 V<sub>max</sub>', 'A<sub>pool</sub>(ΔP−ρgH<sub>0</sub>)/(ρg)', vMax[0]+' '+vMax[1], 'ΔP 耗尽即停止');
+    $('limitBody').innerHTML = rows;
+
+    /* 滑块 */
+    var tEnd = Math.max(p.T, (isFinite(tStart)?tStart:0) + (isFinite(tauFlow)?5*tauFlow:0), 1e-6);
+    state.tEnd = tEnd;
+    var sl = $('tslid');
+    sl.value = Math.round(1000 * Math.min(1, p.T/tEnd));
+    drawFlow(state.tEnd, parseFloat(sl.value)/1000*tEnd);
+  }
+
+  /* ---------- 绘图 ---------- */
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, txt){
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) if (attrs.hasOwnProperty(k)) e.setAttribute(k, attrs[k]);
+    if (txt!=null) e.textContent = txt;
+    return e;
+  }
+  function drawFlow(tEnd, tCursor){
+    var svg = $('chart');
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var p = state.p, c = state.c;
+    if (!p || !c) return;
+
+    var W=720, H=340, ml=74, mr=20, mt=18, mb=44;
+    var pw = W-ml-mr, ph = H-mt-mb;
+    var mode = state.mode;
+
+    function Vof(t){
+      if (!c.canFlow) return 0;
+      var tr = t - c.tStart;
+      if (tr <= 0) return 0;
+      return c.Vmax*(1 - Math.exp(-tr/c.tauFlow));
+    }
+    function Qof(t){
+      if (!c.canFlow) return 0;
+      var tr = t - c.tStart;
+      if (tr <= 0) return 0;
+      return (c.Vmax/c.tauFlow)*Math.exp(-tr/c.tauFlow);
+    }
+    var ymax = (mode==='Vout') ? c.Vmax : c.Q0;
+    if (!(ymax>0)) ymax = 1e-6;
+    ymax *= 1.06;
+
+    function X(t){ return ml + (t/tEnd)*pw; }
+    function Y(v){ return mt + (1 - v/ymax)*ph; }
+    function yfmt(v){ return (mode==='Vout') ? fmtVol(v) : fmtFlow(v); }
+
+    var g = el('g', {});
+    var gridN = 4;
+    for (var iy=0; iy<=gridN; iy++){
+      var vy = ymax*iy/gridN, y = Y(vy);
+      g.appendChild(el('line', {x1:ml,y1:y,x2:W-mr,y2:y,stroke:'#eceef2','stroke-width':1,'shape-rendering':'crispEdges'}));
+      var lab = yfmt(vy);
+      g.appendChild(el('text', {x:ml-8,y:y+4,'text-anchor':'end','font-size':10.5,fill:'#8a909c'}, lab[0]+' '+lab[1]));
+    }
+    var gxN = 5;
+    for (var ix=0; ix<=gxN; ix++){
+      var tx = tEnd*ix/gxN, x = X(tx);
+      g.appendChild(el('line', {x1:x,y1:mt,x2:x,y2:H-mb,stroke:'#f2f3f6','stroke-width':1,'shape-rendering':'crispEdges'}));
+      g.appendChild(el('text', {x:x,y:H-mb+16,'text-anchor':'middle','font-size':10.5,fill:'#8a909c'}, fmtT(tx)[0]));
+    }
+    g.appendChild(el('line', {x1:ml,y1:mt,x2:ml,y2:H-mb,stroke:'#c3c8d0','stroke-width':1}));
+    g.appendChild(el('line', {x1:ml,y1:H-mb,x2:W-mr,y2:H-mb,stroke:'#c3c8d0','stroke-width':1}));
+    g.appendChild(el('text', {x:(ml+W-mr)/2,y:H-8,'text-anchor':'middle','font-size':11,fill:'#6b7280'}, '时间 t（'+fmtT(tEnd)[1]+'）'));
+    g.appendChild(el('text', {x:14,y:(mt+H-mb)/2,'text-anchor':'middle','font-size':11,fill:'#6b7280','transform':'rotate(-90 14 '+((mt+H-mb)/2)+')'}, (mode==='Vout'?'流出量 V':'流量 Q')));
+
+    if (mode==='Vout' && c.canFlow){
+      g.appendChild(el('line', {x1:ml,y1:Y(c.Vmax),x2:W-mr,y2:Y(c.Vmax),stroke:'#c0392b','stroke-width':1,'stroke-dasharray':'5 4',opacity:.5}));
+      g.appendChild(el('text', {x:W-mr-4,y:Y(c.Vmax)-5,'text-anchor':'end','font-size':10.5,fill:'#c0392b'}, 'V_max'));
+    }
+
+    var pts = [], N=160;
+    for (var n=0;n<=N;n++){
+      var t = tEnd*n/N;
+      var vv = (mode==='Vout') ? Vof(t) : Qof(t);
+      pts.push(X(t)+','+Y(vv));
+    }
+    g.appendChild(el('polyline', {points:pts.join(' '),fill:'none',stroke:'#1a5fb4','stroke-width':2,'stroke-linejoin':'round'}));
+
+    if (isFinite(c.tStart) && c.tStart>0 && c.tStart<=tEnd){
+      var xs = X(c.tStart);
+      g.appendChild(el('line', {x1:xs,y1:mt,x2:xs,y2:H-mb,stroke:'#0b7a3b','stroke-width':1,'stroke-dasharray':'4 3',opacity:.7}));
+      g.appendChild(el('text', {x:xs+3,y:mt+11,'font-size':10.5,fill:'#0b7a3b'}, 't_start'));
+    }
+    if (p.T>0 && p.T<=tEnd){
+      var xt = X(p.T);
+      g.appendChild(el('line', {x1:xt,y1:mt,x2:xt,y2:H-mb,stroke:'#1a5fb4','stroke-width':1,'stroke-dasharray':'4 3',opacity:.6}));
+      g.appendChild(el('text', {x:xt+3,y:H-mb-6,'font-size':10.5,fill:'#1a5fb4','text-anchor':'end'}, 'T'));
+    }
+
+    var vc = (mode==='Vout') ? Vof(tCursor) : Qof(tCursor);
+    g.appendChild(el('circle', {cx:X(tCursor), cy:Y(vc), r:4.5, fill:'#c0392b'}));
+
+    svg.appendChild(g);
+
+    var vr = (mode==='Vout') ? fmtVol(Vof(tCursor)) : fmtFlow(Qof(tCursor));
+    $('tslidRead').textContent = 't='+fmtT(tCursor)[0]+' '+fmtT(tCursor)[1]+' · '+(mode==='Vout'?'V=':'Q=')+vr[0]+' '+vr[1];
+  }
+
+  /* ---------- 交互 ---------- */
+  var inputs = ['Patm','Ptop','D','L','H0','Dpool','T','g','Pvap','rho','mu'];
+  inputs.forEach(function(id){ $(id).addEventListener('input', calc); });
+
+  var seg = $('modeSeg');
+  seg.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('button') : null;
+    if (!b) return;
+    var bs = seg.querySelectorAll('button');
+    for (var i=0;i<bs.length;i++) bs[i].classList.toggle('active', bs[i]===b);
+    state.mode = b.getAttribute('data-mode');
+    var sl = $('tslid');
+    drawFlow(state.tEnd, parseFloat(sl.value)/1000*state.tEnd);
+  });
+
+  $('tslid').addEventListener('input', function(){
+    drawFlow(state.tEnd, parseFloat(this.value)/1000*state.tEnd);
+  });
+
+  calc();
+})();
+</script>
+</body>
+</html>
