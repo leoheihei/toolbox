@@ -309,13 +309,6 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
           </div>
         </div>
 
-        <div class="card">
-          <h2>两条极限对比</h2>
-          <table class="tbl">
-            <thead><tr><th>场景</th><th>表达式</th><th>数值</th><th>说明</th></tr></thead>
-            <tbody id="limitBody"></tbody>
-          </table>
-        </div>
       </div>
     </div>
   </section>
@@ -468,6 +461,9 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
   'use strict';
   var $ = function(id){ return document.getElementById(id); };
 
+  /* ---------- 全局设置 ---------- */
+  var CHART_SPAN = 600;   // 曲线时间范围：横轴固定 0 ~ CHART_SPAN 秒
+
   /* ---------- Tabs ---------- */
   var tabs = document.querySelectorAll('.tab');
   for (var i=0;i<tabs.length;i++){
@@ -596,7 +592,7 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
     var p = readSI();
     if (!(p.D>0) || !(p.L>0) || !(p.T>=0) || !(p.rho>0) || !(p.mu>0) || !(p.g>0) || !(p.Patm>0) || !(p.Ptop>=0) || !(p.H0>=0) || !(p.Dpool>0)){
       $('msgs').innerHTML = '<div class="msg err">请输入有效的正数参数（P<sub>atm</sub>、D、L、ρ、μ、g、D<sub>pool</sub> 需 &gt; 0，P<sub>top</sub>、H<sub>0</sub>、T 需 ≥ 0）。</div>';
-      $('kpis').innerHTML = ''; $('limitBody').innerHTML = '';
+      $('kpis').innerHTML = '';
       $('tslidRead').textContent = '';
       return;
     }
@@ -657,20 +653,8 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
     k.push(kpi('水位下降 Δz(T)', dzs[0], dzs[1], false, '储液池液面'));
     $('kpis').innerHTML = k.join('');
 
-    /* 极限对比表 */
-    var rows = '';
-    function row(name, expr, val, note){
-      return '<tr><td>'+name+'</td><td class="c">'+expr+'</td><td class="c">'+val+'</td><td>'+note+'</td></tr>';
-    }
-    var q0q = fmtFlow(Q0), qNq = fmtFlow(Qnow);
-    rows += row('初始流量 Q<sub>0</sub>', 'πr⁴(ΔP−ρgH<sub>0</sub>)/(8μL)', q0q[0]+' '+q0q[1], canFlow?'出水瞬间流量':'吸力不足，出水为 0');
-    rows += row('时刻 T 流量 Q(T)', 'Q<sub>0</sub>·e<sup>−t′/τ<sub>flow</sub></sup>', qNq[0]+' '+qNq[1], 't′ = T − t<sub>start</sub>');
-    rows += row('流出总量 V<sub>out</sub>(T)', 'V<sub>max</sub>(1−e<sup>−t′/τ<sub>flow</sub></sup>)', vOut[0]+' '+vOut[1], '到计时 T');
-    rows += row('总可流出量 V<sub>max</sub>', 'A<sub>pool</sub>(ΔP−ρgH<sub>0</sub>)/(ρg)', vMax[0]+' '+vMax[1], 'ΔP 耗尽即停止');
-    $('limitBody').innerHTML = rows;
-
     /* 滑块 */
-    var tEnd = Math.max(p.T, (isFinite(tStart)?tStart:0) + (isFinite(tauFlow)?5*tauFlow:0), 1e-6);
+    var tEnd = Math.max(CHART_SPAN, p.T);
     state.tEnd = tEnd;
     var sl = $('tslid');
     sl.value = Math.round(1000 * Math.min(1, p.T/tEnd));
