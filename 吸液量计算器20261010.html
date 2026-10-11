@@ -168,7 +168,31 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
       <!-- 左列：输入 -->
       <div class="col-in">
         <div class="card">
-          <h2>输入参数</h2>
+          <h2>管子参数 <span class="tag">内径 / 有效长度</span></h2>
+
+          <div class="frow">
+            <label>管内径 D</label>
+            <input type="number" id="D" step="any" value="4">
+            <select id="u_D">
+              <option value="0.001" selected>mm</option>
+              <option value="0.01">cm</option>
+            </select>
+          </div>
+          <div class="hint">建议 &lt; 10 mm（题目给定 &lt; 1 cm）</div>
+
+          <div class="frow">
+            <label>管路长度 L <i>黏性作用长度</i></label>
+            <input type="number" id="L" step="any" value="50">
+            <select id="u_L">
+              <option value="0.01" selected>cm</option>
+              <option value="1">m</option>
+            </select>
+          </div>
+          <div class="hint">沿程流动路径长度（软管弯曲时取等效路径长度）</div>
+        </div>
+
+        <div class="card">
+          <h2>驱动条件 <span class="tag">吸力与提升高度</span></h2>
 
           <div class="frow">
             <label>大气压 P<sub>atm</sub></label>
@@ -196,26 +220,6 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
           <div class="hint" id="dPRead">ΔP = P<sub>atm</sub> − P<sub>top</sub> = 10.00 kPa</div>
 
           <div class="frow">
-            <label>管内径 D</label>
-            <input type="number" id="D" step="any" value="4">
-            <select id="u_D">
-              <option value="0.001" selected>mm</option>
-              <option value="0.01">cm</option>
-            </select>
-          </div>
-          <div class="hint">建议 &lt; 10 mm（题目给定 &lt; 1 cm）</div>
-
-          <div class="frow">
-            <label>管路长度 L <i>黏性作用长度</i></label>
-            <input type="number" id="L" step="any" value="50">
-            <select id="u_L">
-              <option value="0.01" selected>cm</option>
-              <option value="1">m</option>
-            </select>
-          </div>
-          <div class="hint">沿程流动路径长度（软管弯曲时取等效路径长度）</div>
-
-          <div class="frow">
             <label>出水口高度 H<sub>0</sub> <i>相对池液面</i></label>
             <input type="number" id="H0" step="any" value="20">
             <select id="u_H0">
@@ -224,16 +228,10 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
             </select>
           </div>
           <div class="hint">水须被提升的竖直高度；须 ΔP &gt; ρgH<sub>0</sub> 才能出水</div>
+        </div>
 
-          <div class="frow">
-            <label>储液池直径 D<sub>pool</sub></label>
-            <input type="number" id="Dpool" step="any" value="20">
-            <select id="u_Dpool">
-              <option value="0.01" selected>cm</option>
-              <option value="1">m</option>
-            </select>
-          </div>
-          <div class="hint">池液位随出水下降；池越大液位变化越慢</div>
+        <div class="card">
+          <h2>计时时间 <span class="tag">求解时刻</span></h2>
 
           <div class="frow">
             <label>计时时间 T</label>
@@ -241,19 +239,6 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
             <select id="u_T"><option value="1" selected>s</option></select>
           </div>
           <div class="hint">求解该时刻的累计流出量与瞬时流量</div>
-
-          <div class="frow">
-            <label>重力加速度 g</label>
-            <input type="number" id="g" step="any" value="9.8">
-            <select id="u_g"><option value="1" selected>m/s²</option></select>
-          </div>
-
-          <div class="frow">
-            <label>液体饱和蒸气压 P<sub>vap</sub> <i>空化判据</i></label>
-            <input type="number" id="Pvap" step="any" value="2.34">
-            <select id="u_Pvap"><option value="1000" selected>kPa</option><option value="1">Pa</option></select>
-          </div>
-          <div class="hint">水 20 ℃ ≈ 2.34 kPa</div>
         </div>
 
         <div class="card">
@@ -282,6 +267,33 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
             </select>
           </div>
           <div class="hint">选预设会自动填入 ρ、μ，手动改动即切换为「自定义」</div>
+        </div>
+
+        <div class="card">
+          <h2>储液池与边界 <span class="tag">池径 / 重力 / 空化</span></h2>
+
+          <div class="frow">
+            <label>储液池直径 D<sub>pool</sub></label>
+            <input type="number" id="Dpool" step="any" value="20">
+            <select id="u_Dpool">
+              <option value="0.01" selected>cm</option>
+              <option value="1">m</option>
+            </select>
+          </div>
+          <div class="hint">池液位随出水下降；池越大液位变化越慢</div>
+
+          <div class="frow">
+            <label>重力加速度 g</label>
+            <input type="number" id="g" step="any" value="9.8">
+            <select id="u_g"><option value="1" selected>m/s²</option></select>
+          </div>
+
+          <div class="frow">
+            <label>液体饱和蒸气压 P<sub>vap</sub> <i>空化判据</i></label>
+            <input type="number" id="Pvap" step="any" value="2.34">
+            <select id="u_Pvap"><option value="1000" selected>kPa</option><option value="1">Pa</option></select>
+          </div>
+          <div class="hint">水 20 ℃ ≈ 2.34 kPa</div>
         </div>
       </div>
 
@@ -355,6 +367,15 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
         <li><b>敞口大池、池壁竖直</b>：池面压力恒为 <var>P</var><sub>atm</sub>；池截面积 <var>A</var><sub>pool</sub>=π<i>D</i><sub>pool</sub><sup>2</sup>/4 恒定，液位随出水下降。</li>
         <li><b>管壁可视为刚硬（厚壁硅胶软管适用）</b>：管子可为厚壁硅胶软管——壁厚足够、刚度较高，工作跨壁压 ΔP 远小于临界塌陷压，故<b>截面不塌陷、管径近似不变</b>，仍可沿用 A = πr² 与 Hagen–Poiseuille 定律。管子<b>允许弯曲</b>：由流体静力学，静压只取决于两端竖直高差，弯曲不改变所需提升高度；弯曲仅使流动路径变长、局部损失增大，令流量略减（本模型以管长 L 作为等效特征长度作近似）。前提是弯曲段不形成高于液柱的局部高点（避免气堵）。</li>
       </ul>
+
+      <div class="callout key">
+        <b>弯曲的影响（分级说明）</b>
+        <ul style="margin:6px 0 0;padding-left:20px">
+          <li><b>不改变提升高度 ⇒ 不影响 V<sub>max</sub></b>：所需提升高度只取决于两端的<b>竖直高差</b>（流体静力学），管子如何弯曲都不改变 H<sub>0</sub>；故 V<sub>max</sub>=A<sub>pool</sub>(ΔP−ρgH<sub>0</sub>)/(ρg) 与弯曲无关。</li>
+          <li><b>改变路径长度与局部损失 ⇒ 影响 Q、τ<sub>flow</sub></b>：弯曲使路径变长并引入弯头局部损失，等效黏性阻力增大，令流量 Q 略降、衰减时间常数 τ<sub>flow</sub> 略增（出水更慢，最终总量 V<sub>max</sub> 不变）。层流（Re≪1）下<b>缓弯</b>影响很小，本计算器以 L 作等效路径长度近似。</li>
+          <li><b>极端情形</b>：① 急弯 / 打死折（kink）把截面压扁 ⇒ 有效半径减小，因 Q∝r⁴ 而流量骤降；② 弯曲段若形成<b>高于液柱的局部高点</b>，积聚气体会形成气堵、中断虹吸。故布管应避免急折与向上的局部高点。</li>
+        </ul>
+      </div>
 
       <h3>2. 变量与几何定义</h3>
       <table class="tbl nomen">
@@ -439,6 +460,13 @@ var,.v{font-style:italic; font-family:"Times New Roman",Georgia,serif; font-size
         <li><b>空化上限</b>：P<sub>top</sub> &gt; P<sub>vap</sub>（等价 ΔP &lt; P<sub>atm</sub> − P<sub>vap</sub>）。一个大气压最多支撑约 10.3 m 水柱（水 20 ℃ 时 ≈ 10.1 m）。</li>
         <li><b>总容量上限</b>：V ≤ V_max = A_pool(ΔP−ρgH₀)/(ρg)。池液位降到 ΔP 恰好全用于提升时出水停止。</li>
       </ul>
+
+      <div class="callout note">
+        <b>补充：出水口低于池液面（H<sub>0</sub> &lt; 0）——重力自流工况</b>
+        <p style="margin:6px 0 0">当出水口<b>浸没在池液面以下</b>（相对池液面为负高度）时，水<b>靠重力即可自行流出</b>（虹吸 / 自流），并不依赖吸力；吸力只起<b>加速</b>作用，故实际流量比 H<sub>0</sub>=0 时更大。只要池面敞口、管路连通且无气堵，水会一直流到池液面降至平衡高度 h<sub>eq</sub>=ΔP/(ρg) 才停止。</p>
+        <p style="margin:6px 0 0">就流量曲线而言，这与 H<sub>0</sub>≥0 的情形<b>是同一条指数曲线</b>：H 由负值连续增大到 h<sub>eq</sub>，V(t)=V<sub>max</sub>(1−e<sup>−t/τ<sub>flow</sub></sup>) 全程连续，<b>无分段突变</b>（只是 V<sub>max</sub> 更大、起始流量更高）。</p>
+        <p style="margin:6px 0 0"><b>本计算器输入要求 H<sub>0</sub> ≥ 0</b>；出水口低于液面属重力自流工况，请另行判断。</p>
+      </div>
 
       <h3>7. 次要因素与未纳入因素 <span class="badge no">本计算器未实现</span></h3>
       <ul>
