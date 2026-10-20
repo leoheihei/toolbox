@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>整理剂用量计算器 · 逆解 v（基于浓度计算.nb）</title>
+<style>
+  :root{
+    --bg:#F7F7F5; --card:#FFFFFF; --line:#E3E1DA; --line2:#CFCCC2;
+    --tx:#26251F; --tx2:#5F5E5A; --tx3:#8A8880;
+    --blue:#185FA5; --blue-bg:#E6F1FB;
+    --amber:#854F0B; --amber-bg:#FAEEDA;
+    --red:#A32D2D; --red-bg:#FCEBEB;
+    --green:#3B6D11; --green-bg:#EAF3DE;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:24px 20px 48px;
+    background:var(--bg); color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:13px; line-height:1.6;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:19px;font-weight:600;margin:0 0 4px}
+  h2{font-size:14px;font-weight:600;margin:0 0 12px}
+  h3{font-size:13px;font-weight:600;margin:0 0 8px}
+  .sub{color:var(--tx2);font-size:12.5px;margin:0 0 18px}
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:minmax(0,340px) minmax(0,1fr)}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  @media(max-width:900px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card+.card{margin-top:16px}
+  label{display:block;font-size:12px;color:var(--tx2);margin:0 0 3px}
+  .f{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:center;margin:0 0 9px}
+  .f .lab{font-size:12.5px;color:var(--tx);line-height:1.35}
+  .f .lab i{font-style:normal;color:var(--tx3);font-size:11px}
+  input[type=number],input[type=text],select{
+    width:100%;padding:5px 7px;border:1px solid var(--line2);border-radius:6px;
+    font:inherit;font-size:12.5px;color:var(--tx);background:#fff;
+  }
+  input[type=number]:focus,select:focus{outline:2px solid var(--blue-bg);border-color:var(--blue)}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  button{
+    font:inherit;font-size:12.5px;padding:6px 12px;border-radius:7px;
+    border:1px solid var(--line2);background:#fff;color:var(--tx);cursor:pointer;
+  }
+  button:hover{background:#F2F1EC}
+  button.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+  button.pri:hover{background:#134E88}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px}
+  .kbox{background:#F7F7F5;border-radius:9px;padding:11px 13px}
+  .kbox .k{font-size:11.5px;color:var(--tx2);margin:0 0 3px}
+  .kbox .val{font-size:21px;font-weight:600;letter-spacing:-.3px}
+  .kbox .u{font-size:12px;font-weight:400;color:var(--tx3);margin-left:2px}
+  .kbox .hint{font-size:11px;color:var(--tx3);margin-top:2px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  th{font-weight:600;color:var(--tx2);background:#FAFAF8;position:sticky;top:0}
+  tr.out td{background:var(--amber-bg)}
+  .scroll{max-height:290px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  /* —— 符号/术语对照表 nomenclature —— */
+  .nomen{table-layout:fixed;font-size:11.5px}
+  .nomen th,.nomen td{text-align:left;vertical-align:top;padding:6px 9px;line-height:1.45}
+  .nomen thead th{position:static;background:#FAFAF8;font-weight:600;color:var(--tx2);border-bottom:1px solid var(--line2)}
+  .nomen td.sym{font-family:ui-monospace,Menlo,monospace;white-space:nowrap;color:var(--tx)}
+  .nomen td.unit{font-family:ui-monospace,Menlo,monospace;color:var(--tx3)}
+  .nomen tr.grp td{background:var(--blue-bg);color:var(--blue);font-weight:600;font-size:11px;letter-spacing:.4px;padding:5px 9px}
+  .nomen td.note{color:var(--tx3);font-size:11px}
+  @media print{.nomen{font-size:10px}.nomen tr{break-inside:avoid}}
+  .msg{border-radius:8px;padding:9px 12px;font-size:12.5px;margin:0 0 8px;border:1px solid transparent}
+  .msg.ok{background:var(--green-bg);color:var(--green);border-color:#C0DD97}
+  .msg.warn{background:var(--amber-bg);color:var(--amber);border-color:#EFD8A8}
+  .msg.err{background:var(--red-bg);color:var(--red);border-color:#F0BFBF}
+  .msg b{font-weight:600}
+  .chartbox{border:1px solid var(--line);border-radius:9px;padding:10px 12px 6px;background:#fff}
+  .chartbox p{margin:0 0 6px;font-size:12.5px;font-weight:600}
+  .chartbox .note{margin:4px 0 0;font-size:11.5px;font-weight:400;color:var(--tx3)}
+  details{border-top:1px solid var(--line);padding-top:12px;margin-top:14px}
+  details>summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--tx2);list-style:none}
+  details>summary::-webkit-details-marker{display:none}
+  details>summary::before{content:"▸ ";color:var(--tx3)}
+  details[open]>summary::before{content:"▾ "}
+  .coefgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px 14px;margin-top:12px}
+  .coefgrid .f{margin:0;grid-template-columns:minmax(0,1fr) 130px}
+  .coefgrid .f.rf{grid-template-columns:minmax(0,1fr);gap:3px;margin:0 0 3px}
+  .coefgrid .f.rf .rpair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;width:100%;min-width:0}
+  .coefgrid .lab{font-size:11.5px;font-family:ui-monospace,Menlo,monospace}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#F2F1EC;padding:1px 4px;border-radius:4px}
+  .muted{color:var(--tx3);font-size:11.5px}
+  .rowflex{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+  .rowflex .f{margin:0;grid-template-columns:auto 92px}
+  hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+  .back{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;line-height:1;
+    color:var(--blue);text-decoration:none;padding:6px 13px;border:1px solid var(--line2);
+    border-radius:20px;background:#fff;margin:0 0 12px;
+    transition:border-color .15s,background .15s,color .15s}
+  .back:hover{border-color:var(--blue);background:var(--blue-bg)}
+  .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;background:var(--blue-bg);color:var(--blue);margin-left:6px;vertical-align:1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="index.html" title="返回日常工具箱首页">← 返回首页</a>
+  <h1>整理剂用量计算器 · 逆解 v</h1>
+  <p class="sub">
+    基于 <code>浓度计算.nb</code>（Mathematica 12.3 / 2026-09-17）中的 JMP 平整度响应面模型，反解达到目标平整度所需的整理剂用量。
+    零依赖单文件，双击即可离线运行。公式：<code>v = (sa − B) / (0.149052·c + 0.00405792)</code>
+  </p>
+
+  <div id="warnBox"></div>
+
+  <div class="grid g2">
+    <!-- ============ 左：输入 ============ -->
+    <div>
+      <div class="card">
+        <h2>输入工况</h2>
+
+        <div class="f"><span class="lab">目标平整度 sa <i>（响应目标）</i></span>
+          <input type="number" id="in_sa" step="0.05" value="3.5"></div>
+        <div class="f"><span class="lab">整理剂浓度 c <i>（质量分数，0.035 = 3.5%）</i></span>
+          <input type="number" id="in_c" step="0.001" value="0.035"></div>
+        <div class="f"><span class="lab">负载 La <i>（kg）</i></span>
+          <input type="number" id="in_La" step="0.05" value="0.3"></div>
+        <div class="f"><span class="lab">水蒸汽持续时间 d <i>（min）</i></span>
+          <input type="number" id="in_d" step="0.5" value="3"></div>
+        <div class="f"><span class="lab">水蒸汽介入时间 t3 <i>（min）</i></span>
+          <input type="number" id="in_t3" step="0.1" value="4.7"></div>
+        <div class="f"><span class="lab">干燥时间 t2 <i>（min）</i></span>
+          <input type="number" id="in_t2" step="1" value="45"></div>
+        <div class="f"><span class="lab">整理剂介入时间 t1 <i>（min）</i></span>
+          <input type="number" id="in_t1" step="0.5" value="0"></div>
+
+        <div class="btns">
+          <button class="pri" id="btnBase">载入 nb 基准工况</button>
+          <button id="btnZero">t1 = 0（基准）</button>
+        </div>
+
+        <details>
+          <summary>设计区间检查（越界即在外推，结果仅供参考）</summary>
+          <p class="muted" style="margin:10px 0 0">
+            下列区间为<strong>推测默认值，请务必按 JMP 实验设计表核对后修改</strong>。每项左框为下限、右框为上限；任一框留空表示该项不检查。
+          </p>
+          <div class="coefgrid" id="rangeGrid"></div>
+          <div class="btns"><button id="btnRangeReset">恢复推测默认区间</button></div>
+        </details>
+
+        <details>
+          <summary>高级：模型系数（模型重新拟合后在此替换）</summary>
+          <p class="muted" style="margin:10px 0 0">修改后立即生效，无需改代码。点"恢复"回到 nb 中的原值。</p>
+          <div class="coefgrid" id="coefGrid"></div>
+          <div class="btns"><button id="btnCoefReset">恢复 nb 原始系数</button></div>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 右：结果 ============ -->
+    <div>
+      <div class="card">
+        <h2>计算结果</h2>
+        <div class="kpi">
+          <div class="kbox"><div class="k">所需整理剂用量 v</div>
+            <div class="val"><span id="outV">—</span><span class="u">mL</span></div>
+            <div class="hint" id="outVnote"></div></div>
+          <div class="kbox"><div class="k">有效固含量</div>
+            <div class="val"><span id="outSolid">—</span><span class="u">g</span></div>
+            <div class="hint">= v × c，假定溶液密度 ≈ 1 g/mL</div></div>
+          <div class="kbox"><div class="k">单位负载用量</div>
+            <div class="val"><span id="outPerKg">—</span><span class="u">mL/kg</span></div>
+            <div class="hint">仅作参考，不可按比例外推</div></div>
+          <div class="kbox"><div class="k">正算校验 sa</div>
+            <div class="val"><span id="outSa">—</span></div>
+            <div class="hint" id="outSanote"></div></div>
+        </div>
+
+        <hr>
+        <h3>反解敏感度 <span class="badge">放大倍数 1/斜率 = <span id="outAmp">—</span></span></h3>
+        <div class="scroll" style="max-height:230px">
+          <table>
+            <thead><tr><th>变量</th><th>dv / d·</th><th>含义</th></tr></thead>
+            <tbody id="sensBody"></tbody>
+          </table>
+        </div>
+        <p class="muted" style="margin-top:10px">
+          误差传递：若模型的 sa 拟合标准误为 SE，则 v 的不确定度 ≈ <span id="outSe">—</span>。请把 JMP 报表中的 RMSE 填到下方，即可得到当前工况的 v 置信区间。
+        </p>
+        <div class="rowflex" style="margin-top:6px">
+          <div class="f"><span class="lab">模型 RMSE（sa 单位）</span><input type="number" id="in_rmse" step="0.01" value="0.10"></div>
+          <div class="f"><span class="lab">k（覆盖因子）</span><input type="number" id="in_k" step="0.1" value="2"></div>
+          <div class="f"><span class="lab">v 区间</span><span id="outCI" style="font-size:13px;font-weight:600"></span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>实机折算（工程估算，须实机验证）</h2>
+        <div class="rowflex">
+          <div class="f"><span class="lab">实机负载（kg）</span><input type="number" id="in_mLa" step="0.5" value="3"></div>
+          <div class="f"><span class="lab">折算方式</span>
+            <select id="in_mode">
+              <option value="model">直接代入模型（受 La 二次项支配，慎用）</option>
+              <option value="scale">按单位负载等比放大</option>
+            </select></div>
+        </div>
+        <div class="kpi" style="margin-top:12px">
+          <div class="kbox"><div class="k">折算用量</div>
+            <div class="val"><span id="outMV">—</span><span class="u">mL</span></div>
+            <div class="hint" id="outMVnote"></div></div>
+          <div class="kbox"><div class="k">折算单位负载</div>
+            <div class="val"><span id="outMPerKg">—</span><span class="u">mL/kg</span></div>
+            <div class="hint">与当前工况对比可判断投放策略</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 曲线 ============ -->
+  <div class="card" style="margin-top:16px">
+    <h2>曲线扫描（红点为当前工况；阴影区为推测设计区间）</h2>
+    <div class="grid g3">
+      <div class="chartbox"><p>v 随目标平整度 sa</p><div id="ch1"></div>
+        <p class="note">严格线性——斜率即 1/放大倍数，说明 v 完全由目标 sa 主导。</p></div>
+      <div class="chartbox"><p>v 随整理剂浓度 c</p><div id="ch2"></div>
+        <p class="note">曲线很平：靠提浓度省下的用量很有限（3.5%→4.0% 仅省约 7 mL）。</p></div>
+      <div class="chartbox"><p>v 随负载 La</p><div id="ch3"></div>
+        <p class="note">在 La ≈ 2.04 kg 处翻头下降，属二次项外推假象，不可外推到该点之后。</p></div>
+    </div>
+  </div>
+
+  <!-- ============ 批量扫描 ============ -->
+  <div class="card" style="margin-top:16px">
+    <h2>批量扫描与导出</h2>
+    <div class="rowflex">
+      <div class="f"><span class="lab">扫描变量</span>
+        <select id="in_scan">
+          <option value="sa">目标平整度 sa</option>
+          <option value="c">浓度 c</option>
+          <option value="La">负载 La（kg）</option>
+          <option value="d">水蒸汽持续时间 d（min）</option>
+          <option value="t2">干燥时间 t2（min）</option>
+          <option value="t3">水蒸汽介入时间 t3（min）</option>
+          <option value="t1">整理剂介入时间 t1（min）</option>
+        </select></div>
+      <div class="f"><span class="lab">起</span><input type="number" id="in_s0" step="any" value="2.5"></div>
+      <div class="f"><span class="lab">止</span><input type="number" id="in_s1" step="any" value="4.5"></div>
+      <div class="f"><span class="lab">步长</span><input type="number" id="in_st" step="any" value="0.1"></div>
+      <div class="f"><span class="lab">&nbsp;</span><button class="pri" id="btnScan">生成表格</button></div>
+      <div class="f"><span class="lab">&nbsp;</span><button id="btnCsv">下载 CSV</button></div>
+      <div class="f"><span class="lab">&nbsp;</span><button id="btnCopy">复制表格</button></div>
+    </div>
+    <div class="scroll" style="margin-top:12px"><table>
+      <thead><tr><th id="scanHead">扫描值</th><th>v (mL)</th><th>有效固含量 (g)</th><th>mL/kg</th><th>状态</th></tr></thead>
+      <tbody id="scanBody"><tr><td colspan="5" class="muted" style="text-align:center;padding:14px">点"生成表格"</td></tr></tbody>
+    </table></div>
+    <p class="muted" style="margin-top:8px">标黄行表示该扫描值已越出推测设计区间，属模型外推。</p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>符号与术语对照（Nomenclature）</h2>
+    <p class="muted" style="margin:0 0 10px">变量、响应与派生量共 15 项；14 个回归系数见「高级：模型系数」面板，不在本表内。</p>
+    <table class="nomen">
+      <colgroup>
+        <col style="width:9%"><col style="width:12%"><col style="width:26%">
+        <col style="width:11%"><col style="width:22%"><col style="width:20%">
+      </colgroup>
+      <thead>
+        <tr><th>符号</th><th>中文名称</th><th>英文名称</th><th>单位</th><th>说明</th><th>备注</th></tr>
+      </thead>
+      <tbody>
+        <tr class="grp"><td colspan="6">A. 工艺变量</td></tr>
+        <tr><td class="sym">c</td><td>整理剂浓度</td>
+          <td>mass fraction of finishing agent（模型用法）／ mass concentration of finishing agent（实验侧）</td>
+          <td class="unit">—（模型）／g/L（实验）</td>
+          <td>同一符号两套含义：模型按质量分数，实验侧按 g/L</td>
+          <td class="note">⚠ nb 注释误写 g/L</td></tr>
+        <tr><td class="sym">v</td><td>整理剂用量</td><td>volume of finishing agent</td>
+          <td class="unit">mL</td><td>本页输出量</td><td class="note">—</td></tr>
+        <tr><td class="sym">La</td><td>负载</td><td>fabric load mass</td>
+          <td class="unit">kg</td><td>—</td><td class="note">nb 中写作 <code>Kg</code></td></tr>
+        <tr><td class="sym">d</td><td>水蒸汽持续时间</td><td>steam treatment duration</td>
+          <td class="unit">min</td><td>—</td><td class="note">与 t3 易混，映射待核对</td></tr>
+        <tr><td class="sym">t3</td><td>水蒸汽介入时间</td><td>steam injection time</td>
+          <td class="unit">min</td><td>—</td><td class="note">pptx 写作「水蒸气」</td></tr>
+        <tr><td class="sym">t2</td><td>干燥时间</td><td>drying duration</td>
+          <td class="unit">min</td><td>t2 = 45 min 处曲率与线性项近乎抵消</td><td class="note">—</td></tr>
+        <tr><td class="sym">t1</td><td>整理剂介入时间</td><td>finishing agent injection time</td>
+          <td class="unit">min</td><td>模型效应 ≈ 0，近乎冗余</td><td class="note">—</td></tr>
+      </tbody>
+      <tbody>
+        <tr class="grp"><td colspan="6">B. 响应</td></tr>
+        <tr><td class="sym">sa</td><td>外观平整度等级</td><td>appearance smoothness grade</td>
+          <td class="unit">级</td>
+          <td>AATCC 124-2010 评定；等价词：除皱／抗皱；合同指标 ≥3.5 级</td>
+          <td class="note">数值越大越平整</td></tr>
+      </tbody>
+      <tbody>
+        <tr class="grp"><td colspan="6">C. 派生量</td></tr>
+        <tr><td class="sym">m_s</td><td>有效固含量</td><td>mass of effective solids</td>
+          <td class="unit">g</td><td>= v·c（假定溶液密度 ≈ 1 g/mL）</td><td class="note">—</td></tr>
+        <tr><td class="sym">q</td><td>单位负载用量</td><td>specific dosage</td>
+          <td class="unit">mL/kg</td><td>= v / La</td><td class="note">仅供参考，不可按比例外推</td></tr>
+        <tr><td class="sym">S</td><td>模型对 v 的斜率</td><td>model slope w.r.t. v</td>
+          <td class="unit">mL⁻¹</td><td>= 0.149052·c + 0.00405792</td>
+          <td class="note">随 c 变化，本表仅列式不列值</td></tr>
+        <tr><td class="sym">1/S</td><td>用量放大倍数</td><td>dosage amplification factor</td>
+          <td class="unit">mL/级</td><td>≈ 108（c ≈ 0.035 基准）</td>
+          <td class="note">随 c 变，见脚注④</td></tr>
+        <tr><td class="sym">RMSE</td><td>模型残差标准误</td><td>residual standard error of model</td>
+          <td class="unit">级</td><td>页面输入项，用于误差传递</td><td class="note">—</td></tr>
+        <tr><td class="sym">k</td><td>覆盖因子</td><td>coverage factor</td>
+          <td class="unit">—</td><td>页面输入项，默认 2</td><td class="note">—</td></tr>
+        <tr><td class="sym">sa_pred</td><td>预测平整度</td><td>predicted smoothness grade</td>
+          <td class="unit">级</td><td>正算校验用（页面「正算校验 sa」）</td><td class="note">—</td></tr>
+      </tbody>
+    </table>
+    <hr>
+    <p class="muted" style="margin:0">
+      <strong>脚注：</strong>
+      ① 整理剂 = 氨基硅油 = 改性 PDMS（聚二甲基硅氧烷），商品层面亦称柔软剂／护理液；
+      ② 平整度按 AATCC 124-2010 评定，单位「级」，数值越大越平整；
+      ③ 单位书写遵循项目习惯：浓度用 <code>g/L</code>（不用 <code>g·L⁻¹</code>），体积 <code>mL</code>（不用 <code>ml</code>），质量 <code>kg</code>（不用 <code>Kg</code>）；
+      ④ c 的双重含义：模型按质量分数（0.035 = 3.5%）代入，实验侧常记为 g/L；本页 c 一律按质量分数处理（与 nb 注释的 g/L 不一致，以模型为准）。
+    </p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>模型与使用须知</h2>
+    <p style="margin:0 0 8px">
+      <strong>响应面模型（7 因子）：</strong>
+      sa = B + (0.149052·c + 0.00405792)·v，其中<br>
+      B = 2.80246 + 0.248919·d − 1.33856·La + 0.286129·La² + 0.00289302·t1 − 0.0702392·t2
+      + 0.0011104·t2² + 0.0208514·t3 − 0.000585764·t1·t3 − 0.000759193·t3² − 12.4612·c + 4.82094·c·La
+    </p>
+    <p style="margin:0 0 8px">
+      <strong>必须知道的五条：</strong>
+    </p>
+    <ol style="margin:0;padding-left:20px">
+      <li><strong>c 是质量分数，不是 g/L。</strong>nb 中的注释写作 g/L，但只有按质量分数（0.035 = 3.5%）代入，v×c 才等于克数。</li>
+      <li><strong>v 在模型中只有线性项</strong>，意味着"越加越好"没有上限。若实验中已观察到平台（饱和），高目标 sa 下本工具会系统性高估用量。</li>
+      <li><strong>La 二次项在 2.04 kg 处翻头</strong>，模型预测超过该负载后用量反而下降——这是外推假象，不可用于实机大负载。</li>
+      <li><strong>放大倍数约 108</strong>：sa 的模型误差会被原样放大 108 倍变成 mL，所以务必用 RMSE 给出区间，不要只报单点值。</li>
+      <li><strong>d 与 t3 的因子映射需核对</strong>：两者都属"水蒸汽"时间，系数相差约 20 倍，若在 JMP 中写反，结果会完全不同。</li>
+    </ol>
+    <p class="muted" style="margin-top:10px">
+      来源：<code>浓度计算.nb</code>（Mathematica 12.3，2026-09-17）· 计算器版本 20260917 · 本页面不联网、不上传任何数据。
+    </p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DEF_COEF = {
+    k0:    2.80246,
+    kd:    0.248919,
+    kLa:  -1.33856,
+    kLa2:  0.286129,
+    kt1:   0.00289302,
+    kt2:  -0.0702392,
+    kt2sq: 0.0011104,
+    kt3:   0.0208514,
+    kt1t3:-0.000585764,
+    kt3sq:-0.000759193,
+    kc:   -12.4612,
+    kcLa:  4.82094,
+    kcv:   0.149052,
+    kv:    0.00405792
+  };
+
+  var COEF_LABEL = {
+    k0:"常数项 k0", kd:"k_d · d", kLa:"k_La · La", kLa2:"k_La2 · La²",
+    kt1:"k_t1 · t1", kt2:"k_t2 · t2", kt2sq:"k_t2sq · t2²",
+    kt3:"k_t3 · t3", kt1t3:"k_t1t3 · t1·t3", kt3sq:"k_t3sq · t3²",
+    kc:"k_c · c", kcLa:"k_cLa · c·La", kcv:"k_cv · c·v", kv:"k_v · v"
+  };
+
+  var DEF_RANGE = {
+    sa:[2.5,4.5], c:[0.02,0.05], La:[0.1,1.0], d:[0,6],
+    t3:[0,6], t2:[30,60], t1:[0,10], v:[0,300]
+  };
+  var RANGE_LABEL = {
+    sa:"目标平整度 sa", c:"浓度 c", La:"负载 La (kg)", d:"水蒸汽持续 d (min)",
+    t3:"水蒸汽介入 t3 (min)", t2:"干燥时间 t2 (min)", t1:"整理剂介入 t1 (min)", v:"用量 v (mL)"
+  };
+
+  var BASE = {sa:3.5, c:0.035, La:0.3, d:3, t3:4.7, t2:45, t1:0};
+
+  var coef = Object.assign({}, DEF_COEF);
+  var range = {};
+  Object.keys(DEF_RANGE).forEach(function(k){ range[k] = DEF_RANGE[k].slice(); });
+
+  function $(id){ return document.getElementById(id); }
+  function num(id, dflt){
+    var v = parseFloat($(id).value);
+    return isFinite(v) ? v : dflt;
+  }
+  function fmt(x, n){
+    if(!isFinite(x)) return "—";
+    var s = Math.abs(x) >= 1000 ? x.toFixed(0) : x.toFixed(n === undefined ? 2 : n);
+    return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  /* ---------- 核心公式 ---------- */
+  function Bof(p){
+    var c=p.c, La=p.La;
+    return coef.k0 + coef.kd*p.d + coef.kLa*La + coef.kLa2*La*La
+         + coef.kt1*p.t1 + coef.kt2*p.t2 + coef.kt2sq*p.t2*p.t2
+         + coef.kt3*p.t3 + coef.kt1t3*p.t1*p.t3 + coef.kt3sq*p.t3*p.t3
+         + coef.kc*c + coef.kcLa*c*La;
+  }
+  function slopeOf(c){ return coef.kcv*c + coef.kv; }
+  function vReq(p){ return (p.sa - Bof(p)) / slopeOf(p.c); }
+  function saPred(p, v){ return Bof(p) + slopeOf(p.c)*v; }
+
+  /* ---------- 读取参数 ---------- */
+  var FIELDS = ["sa","c","La","d","t3","t2","t1"];
+  function readParams(){
+    var p = {};
+    FIELDS.forEach(function(k){ p[k] = num("in_"+k, BASE[k]); });
+    return p;
+  }
+  function setParams(p){
+    FIELDS.forEach(function(k){ $("in_"+k).value = p[k]; });
+  }
+
+  /* ---------- 区间检查 ---------- */
+  function check(key, val){
+    var r = range[key];
+    if(!r || r[0] === null || r[1] === null) return null;
+    if(val < r[0]) return "低于设计下限 " + r[0];
+    if(val > r[1]) return "高于设计上限 " + r[1];
+    return null;
+  }
+
+  /* ---------- 主刷新 ---------- */
+  function refresh(){
+    var p = readParams();
+    if(slopeOf(p.c) === 0){
+      $("outV").textContent = "∞";
+      $("warnBox").innerHTML = '<div class="msg err">斜率 (0.149052·c + 0.00405792) = 0，无法反解：请检查浓度 c 或模型系数 k_cv / k_v。</div>';
+      return;
+    }
+    var v = vReq(p);
+    var solid = v * p.c;
+    var perKg = p.La !== 0 ? v / p.La : NaN;
+    var back = saPred(p, v);
+
+    $("outV").textContent = fmt(v, 1);
+    $("outSolid").textContent = fmt(solid, 2);
+    $("outPerKg").textContent = isFinite(perKg) ? fmt(perKg, 0) : "—";
+    $("outSa").textContent = fmt(back, 3);
+    $("outVnote").textContent = v < 0 ? "负值：该目标在此工况下模型不可达" : "闭式解，唯一";
+    $("outSanote").textContent = Math.abs(back - p.sa) < 1e-6 ? "与目标一致 ✓" : "与目标有偏差，请核对";
+
+    /* 敏感度：v = (sa − B)/S */
+    var S = slopeOf(p.c);
+    var dBd = {
+      sa: -1,
+      c:  -(coef.kc + coef.kcLa*p.La),
+      La: -(coef.kLa + 2*coef.kLa2*p.La + coef.kcLa*p.c),
+      d:  -coef.kd,
+      t2: -(coef.kt2 + 2*coef.kt2sq*p.t2),
+      t3: -(coef.kt3 + coef.kt1t3*p.t1 + 2*coef.kt3sq*p.t3),
+      t1: -(coef.kt1 + coef.kt1t3*p.t3)
+    };
+    var rows = [
+      ["sa","平整度目标（响应）","目标越高，用量线性猛增"],
+      ["c","整理剂浓度","提浓度省下的量很有限"],
+      ["La","负载 (kg)","随负载缓增，但见 La>2 kg 的翻头"],
+      ["d","水蒸汽持续时间 (min)",""],
+      ["t2","干燥时间 (min)","t2=45 min 处曲率与线性项近乎抵消"],
+      ["t3","水蒸汽介入时间 (min)",""],
+      ["t1","整理剂介入时间 (min)","效应近似为 0，模型中近乎冗余"]
+    ];
+    var h = "";
+    rows.forEach(function(r){
+      var k = r[0];
+      var val;
+      if(k === "sa"){ val = 1/S; }
+      else if(k === "c"){
+        /* v = (sa − B)/S，B 与 S 均含 c：全导数 */
+        var N = p.sa - Bof(p), dNdc = -(coef.kc + coef.kcLa*p.La);
+        val = (dNdc*S - N*coef.kcv) / (S*S);
+      } else { val = dBd[k]/S; }
+      h += "<tr><td>" + r[1] + "</td><td><strong>" +
+           (val >= 0 ? "+" : "") + fmt(val, 2) + "</strong> mL</td><td class='muted'>" + r[2] + "</td></tr>";
+    });
+    $("sensBody").innerHTML = h;
+
+    var amp = 1/S;
+    $("outAmp").textContent = fmt(amp, 1);
+
+    /* 误差传递 */
+    var rmse = num("in_rmse", 0.1), kk = num("in_k", 2);
+    var half = rmse * amp * kk;
+    $("outSe").textContent = "±" + fmt(rmse*amp, 1) + " mL（1×SE）";
+    $("outCI").textContent = (v-half).toFixed(1) + " ~ " + (v+half).toFixed(1) + " mL";
+
+    /* 实机折算 */
+    var mLa = num("in_mLa", 3), mode = $("in_mode").value;
+    var mv, mnote;
+    if(mode === "model"){
+      var pm = Object.assign({}, p); pm.La = mLa;
+      mv = vReq(pm);
+      mnote = (mLa > 2.044 ? "⚠ 已越过 La≈2.04 kg 的翻头点，属外推假象" : "模型直接外推");
+    } else {
+      mv = perKg * mLa;
+      mnote = "按 " + fmt(perKg,0) + " mL/kg 等比放大";
+    }
+    $("outMV").textContent = fmt(mv, 1);
+    $("outMPerKg").textContent = mLa ? fmt(mv/mLa, 0) : "—";
+    $("outMVnote").textContent = mnote;
+
+    /* 警告 */
+    var ws = [];
+    var vTxt = check("v", v);
+    if(vTxt) ws.push(['err', "用量 v = " + fmt(v,1) + " mL 越界：" + vTxt + " → 结果属模型外推，务必实验验证。"]);
+
+    var anyOut = false, outList = [];
+    FIELDS.forEach(function(k){
+      var m = check(k, p[k]);
+      if(m){ anyOut = true; outList.push(RANGE_LABEL[k] + " = " + p[k] + " " + m); }
+    });
+    if(anyOut) ws.push(['warn', "输入参数越出推测设计区间：" + outList.join("；") + "。</br>请核对 JMP 设计表后修改区间设定。"]);
+
+    if(p.La > 2.044) ws.push(['err', "负载 La = " + p.La + " kg 已越过 La ≈ 2.044 kg 的非单调翻头点：模型预测所需用量反而下降，属二次项外推假象，不可直接用于实机。"]);
+
+    if(v < 0) ws.push(['err', "反解得到负用量：目标 sa = " + p.sa + " 在当前工况下已能" + (Bof(p) >= p.sa ? "由工艺本身达成" : "不可达") + "，无需另加整理剂。"]);
+
+    if(Math.abs(p.c) < 1e-9) ws.push(['warn', "浓度 c = 0（纯水）：模型仍给出 " + fmt(v,1) + " mL/slope。若纯水对照实验无此效果，应删除 k_v 项或重新拟合。"]);
+
+    if(!anyOut && !vTxt && !ws.length) ws.push(['ok', "所有输入均落在推测设计区间内，反解结果可直接使用（仍建议实验复核）。"]);
+
+    $("warnBox").innerHTML = ws.map(function(w){
+      return '<div class="msg ' + w[0] + '"><b>' + (w[0]==='ok'?'正常':(w[0]==='warn'?'注意':'警告')) + '：</b>' + w[1] + '</div>';
+    }).join("");
+
+    drawAll(p, v);
+    lastP = p;
+  }
+
+  /* ---------- 手写 SVG 折线图 ---------- */
+  function drawAll(p, v){
+    var n = 60;
+    /* ① v–sa */
+    var xs1 = [], ys1 = [];
+    for(var i=0;i<=n;i++){ var s = 2.0 + i*(5.0-2.0)/n; xs1.push(s); ys1.push(vReq(Object.assign({},p,{sa:s}))); }
+    plot("ch1", xs1, ys1, {x:p.sa, y:v, xlab:"目标平整度 sa", ylab:"v (mL)", rng:range.sa});
+
+    /* ② v–c，c 不能为 0 附近（斜率→0 会爆），取 0.005–0.10 */
+    var xs2 = [], ys2 = [];
+    for(i=0;i<=n;i++){ var cc = 0.005 + i*(0.10-0.005)/n; xs2.push(cc); ys2.push(vReq(Object.assign({},p,{c:cc}))); }
+    plot("ch2", xs2, ys2, {x:p.c, y:v, xlab:"浓度 c（质量分数）", ylab:"v (mL)", rng:range.c});
+
+    /* ③ v–La */
+    var xs3 = [], ys3 = [];
+    for(i=0;i<=n;i++){ var L = 0.05 + i*(3.0-0.05)/n; xs3.push(L); ys3.push(vReq(Object.assign({},p,{La:L}))); }
+    plot("ch3", xs3, ys3, {x:p.La, y:v, xlab:"负载 La (kg)", ylab:"v (mL)", rng:range.La});
+  }
+
+  function plot(id, xs, ys, o){
+    var W=340, H=205, m={l:46, r:12, t:12, b:32};
+    var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
+    var y0=Math.min.apply(null,ys), y1=Math.max.apply(null,ys);
+    var pad=(y1-y0)*0.12 || 1; y0-=pad; y1+=pad;
+    var X=function(v){ return m.l + (v-x0)/(x1-x0)*(W-m.l-m.r); };
+    var Y=function(v){ return H-m.b - (v-y0)/(y1-y0)*(H-m.t-m.b); };
+    var s = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+o.ylab+' 随 '+o.xlab+' 变化">';
+    s += '<title>'+o.ylab+' 随 '+o.xlab+' 变化</title>';
+    /* 设计区间阴影 */
+    if(o.rng && o.rng[0]!==null && o.rng[1]!==null){
+      var ra=Math.max(o.rng[0],x0), rb=Math.min(o.rng[1],x1);
+      if(rb>ra) s += '<rect x="'+X(ra)+'" y="'+m.t+'" width="'+(X(rb)-X(ra))+'" height="'+(H-m.t-m.b)+'" fill="#E6F1FB" opacity="0.55"/>';
+    }
+    /* 网格 + y 轴刻度 */
+    for(var g=0; g<=4; g++){
+      var yv = y0 + g*(y1-y0)/4, yy = Y(yv);
+      s += '<line x1="'+m.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-m.r)+'" y2="'+yy.toFixed(1)+'" stroke="#EAE8E2" stroke-width="1"/>';
+      s += '<text x="'+(m.l-6)+'" y="'+(yy+3.5).toFixed(1)+'" font-size="9.5" fill="#8A8880" text-anchor="end">'+Math.round(yv)+'</text>';
+    }
+    /* x 轴刻度 */
+    for(g=0; g<=4; g++){
+      var xv = x0 + g*(x1-x0)/4, xx = X(xv);
+      var lbl = (x1-x0) > 5 ? xv.toFixed(0) : xv.toFixed(2);
+      s += '<text x="'+xx.toFixed(1)+'" y="'+(H-m.b+15)+'" font-size="9.5" fill="#8A8880" text-anchor="middle">'+lbl+'</text>';
+    }
+    s += '<line x1="'+m.l+'" y1="'+(H-m.b)+'" x2="'+(W-m.r)+'" y2="'+(H-m.b)+'" stroke="#CFCCC2" stroke-width="1"/>';
+    s += '<line x1="'+m.l+'" y1="'+m.t+'" x2="'+m.l+'" y2="'+(H-m.b)+'" stroke="#CFCCC2" stroke-width="1"/>';
+    /* 曲线 */
+    var d = "";
+    xs.forEach(function(x, i){
+      if(!isFinite(ys[i])) return;
+      d += (d ? " L" : "M") + X(x).toFixed(1) + " " + Y(ys[i]).toFixed(1);
+    });
+    s += '<path d="'+d+'" fill="none" stroke="#185FA5" stroke-width="2" stroke-linejoin="round"/>';
+    /* 工作点 */
+    if(o.x>=x0 && o.x<=x1 && o.y>y0 && o.y<y1){
+      s += '<line x1="'+X(o.x).toFixed(1)+'" y1="'+m.t+'" x2="'+X(o.x).toFixed(1)+'" y2="'+(H-m.b)+'" stroke="#993C1D" stroke-width="1" stroke-dasharray="3 3"/>';
+      s += '<circle cx="'+X(o.x).toFixed(1)+'" cy="'+Y(o.y).toFixed(1)+'" r="4.5" fill="#993C1D" stroke="#fff" stroke-width="1.5"/>';
+      s += '<text x="'+(X(o.x)+8).toFixed(1)+'" y="'+(Y(o.y)-8).toFixed(1)+'" font-size="10" fill="#993C1D">'+fmt(o.y,0)+'</text>';
+    }
+    s += '<text x="'+(W-m.r)+'" y="'+(H-3)+'" font-size="10" fill="#8A8880" text-anchor="end">'+o.xlab+'</text>';
+    s += '</svg>';
+    $(id).innerHTML = s;
+  }
+
+  /* ---------- 批量扫描 ---------- */
+  var lastP = null, scanRows = [];
+  function runScan(){
+    var p = readParams();
+    var key = $("in_scan").value;
+    var a = num("in_s0", 0), b = num("in_s1", 1), st = num("in_st", 0.1);
+    if(!isFinite(a) || !isFinite(b) || !isFinite(st) || st === 0){ alert("请填写有效的起止值与步长。"); return; }
+    if((b-a)/st > 500){ alert("点数过多（>500），请增大步长。"); return; }
+    var h = {sa:"目标平整度 sa", c:"浓度 c", La:"负载 La (kg)", d:"水蒸汽持续时间 d (min)",
+             t2:"干燥时间 t2 (min)", t3:"水蒸汽介入时间 t3 (min)", t1:"整理剂介入时间 t1 (min)"};
+    $("scanHead").textContent = h[key] || key;
+    var rows = [], html = "";
+    var i = 0, guard = 0;
+    for(var x = a; (st > 0 ? x <= b + st*1e-6 : x >= b - st*1e-6) && guard < 600; x += st, guard++){
+      var pm = Object.assign({}, p);
+      pm[key] = x;
+      var vv = vReq(pm);
+      var isOut = !!check(key, x) || !!check("v", vv);
+      rows.push([ +x.toFixed(6), vv, vv*pm.c, (pm.La ? vv/pm.La : ""), isOut ? "越界/外推" : "区间内" ]);
+      html += '<tr' + (isOut ? ' class="out"' : '') + '><td>' + (+x.toFixed(6)) + '</td><td>' + fmt(vv,1) +
+              '</td><td>' + fmt(vv*pm.c,2) + '</td><td>' + (pm.La ? fmt(vv/pm.La,0) : "—") +
+              '</td><td>' + (isOut ? "越界/外推" : "区间内") + '</td></tr>';
+      i++;
+    }
+    if(!i){ html = '<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">区间无效</td></tr>'; }
+    $("scanBody").innerHTML = html;
+    scanRows = rows;
+  }
+
+  function csvText(){
+    if(!scanRows.length) return "";
+    var p = lastP, key = $("in_scan").value;
+    var head = ["# 整理剂用量计算器导出", "# 时间," + new Date().toLocaleString(),
+      "# 工况: sa="+p.sa+", c="+p.c+", La="+p.La+"kg, d="+p.d+", t3="+p.t3+", t2="+p.t2+", t1="+p.t1,
+      "# 模型: sa = B + (0.149052c + 0.00405792)v  [来源 浓度计算.nb]",
+      [$("scanHead").textContent + "(" + key + ")", "v(mL)", "有效固含量(g)", "mL/kg", "状态"].join(",")];
+    var body = scanRows.map(function(r){ return r.join(","); });
+    return head.concat(body).join("\r\n");
+  }
+
+  function download(){
+    var t = csvText();
+    if(!t){ alert("请先生成表格。"); return; }
+    var blob = new Blob(["\ufeff" + t], {type:"text/csv;charset=utf-8"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "整理剂用量扫描_" + new Date().toISOString().slice(0,10) + ".csv";
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+
+  /* ---------- 动态生成区间 / 系数编辑面板 ---------- */
+  function buildRangeGrid(){
+    var h = "";
+    Object.keys(DEF_RANGE).forEach(function(k){
+      h += '<div class="f rf"><span class="lab">' + RANGE_LABEL[k] + '</span><span class="rpair">' +
+           '<input type="number" step="any" id="r_'+k+'_0" value="'+range[k][0]+'" placeholder="下限">' +
+           '<input type="number" step="any" id="r_'+k+'_1" value="'+range[k][1]+'" placeholder="上限"></span></div>';
+    });
+    $("rangeGrid").innerHTML = h;
+    Object.keys(DEF_RANGE).forEach(function(k){
+      ["0","1"].forEach(function(j){
+        var el = $("r_"+k+"_"+j);
+        if(el) el.addEventListener("input", function(){
+          var x = parseFloat(el.value);
+          if(range[k] === null) return;
+          range[k][j === "0" ? 0 : 1] = isFinite(x) ? x : null;
+          refresh();
+        });
+      });
+    });
+  }
+  function buildCoefGrid(){
+    var h = "";
+    Object.keys(DEF_COEF).forEach(function(k){
+      h += '<div class="f"><span class="lab">' + COEF_LABEL[k] + '</span>' +
+           '<input type="number" step="any" id="k_'+k+'" value="'+coef[k]+'">' + '</div>';
+    });
+    $("coefGrid").innerHTML = h;
+    Object.keys(DEF_COEF).forEach(function(k){
+      var el = $("k_"+k);
+      el.addEventListener("input", function(){
+        var x = parseFloat(el.value);
+        if(isFinite(x)) coef[k] = x;
+        refresh();
+      });
+    });
+  }
+
+  /* ---------- 事件绑定 ---------- */
+  FIELDS.forEach(function(k){ $("in_"+k).addEventListener("input", refresh); });
+  ["in_rmse","in_k","in_mLa","in_mode"].forEach(function(id){ $(id).addEventListener("input", refresh); $(id).addEventListener("change", refresh); });
+
+  $("btnBase").addEventListener("click", function(){ setParams(BASE); refresh(); });
+  $("btnZero").addEventListener("click", function(){ $("in_t1").value = 0; refresh(); });
+  $("btnRangeReset").addEventListener("click", function(){
+    Object.keys(DEF_RANGE).forEach(function(k){
+      range[k] = DEF_RANGE[k].slice();
+      $("r_"+k+"_0").value = range[k][0]; $("r_"+k+"_1").value = range[k][1];
+    });
+    refresh();
+  });
+  $("btnCoefReset").addEventListener("click", function(){
+    coef = Object.assign({}, DEF_COEF);
+    Object.keys(DEF_COEF).forEach(function(k){ $("k_"+k).value = DEF_COEF[k]; });
+    refresh();
+  });
+  $("btnScan").addEventListener("click", runScan);
+  $("btnCsv").addEventListener("click", download);
+  $("btnCopy").addEventListener("click", function(){
+    var t = csvText();
+    if(!t){ alert("请先生成表格。"); return; }
+    navigator.clipboard.writeText(t).then(function(){
+      $("btnCopy").textContent = "已复制 ✓";
+      setTimeout(function(){ $("btnCopy").textContent = "复制表格"; }, 1500);
+    }, function(){ alert("复制失败，请改用下载 CSV。"); });
+  });
+  $("in_scan").addEventListener("change", function(){
+    var d = {sa:[2.5,4.5,0.1], c:[0.02,0.05,0.001], La:[0.1,1.0,0.05], d:[0,6,0.5],
+             t2:[30,60,1], t3:[0,6,0.2], t1:[0,10,0.5]}[this.value];
+    if(d){ $("in_s0").value=d[0]; $("in_s1").value=d[1]; $("in_st").value=d[2]; }
+  });
+
+  /* ---------- 启动 ---------- */
+  buildRangeGrid();
+  buildCoefGrid();
+  setParams(BASE);
+  refresh();
+  runScan();
+
+  /* 自检：基准工况应与 nb 输出一致 */
+  var chk = vReq(BASE);
+  if(Math.abs(chk - 166.37604001513787) > 1e-6){
+    $("warnBox").insertAdjacentHTML("afterbegin",
+      '<div class="msg err"><b>自检失败：</b>基准工况反解得 ' + chk.toFixed(6) +
+      ' mL，与 nb 输出 166.376040 mL 不一致，模型系数可能已被修改。</div>');
+  }
+})();
+</script>
+</body>
+</html>
