@@ -19,7 +19,7 @@
     padding: 24px;
   }
 
-  .container { width: 100%; max-width: 900px; }
+  .container { width: 100%; max-width: 1040px; }
 
   h1 {
     margin: 0 0 8px;
@@ -46,7 +46,7 @@
 
   .cards {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 20px;
   }
 
@@ -135,6 +135,27 @@
           <span class="tag">吸液曲线</span>
         </div>
       </a>
+
+
+      <a class="card" href="硅油RC膜缓释速率计算器.html">
+        <h2>硅油 RC 膜缓释速率计算器</h2>
+        <p>统一扩散–溶解模型：按硅油与 RC 半透膜物性、膜厚及环境条件，计算缓释通量、累积释放曲线与残余浓度衰减。</p>
+        <div class="tags">
+          <span class="tag">统一释放模型</span>
+          <span class="tag">扩散–溶解</span>
+          <span class="tag">释放曲线</span>
+        </div>
+      </a>
+
+      <a class="card" href="整理剂用量计算器20260917.html">
+        <h2>整理剂用量计算器</h2>
+        <p>逆解工具：基于 JMP 响应面模型，由目标平整度 sa 与干燥／蒸汽工艺时间，反算达到目标所需的整理剂用量 v。</p>
+        <div class="tags">
+          <span class="tag">逆解反算</span>
+          <span class="tag">响应面模型</span>
+          <span class="tag">平整度</span>
+        </div>
+      </a>
     </div>
 
     <p class="counter">
@@ -144,6 +165,8 @@
     </p>
 
     <p class="footer">© 梁帅童 · 上海工程技术大学纺织服装学院</p>
+  <!-- Vercount 访问计数器（可选，如长期显示"加载中…"可删除本行） -->
+  <script defer src="https://events.vercount.one/js"></script>
   </main>
 
 </body>
